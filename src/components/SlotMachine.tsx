@@ -154,8 +154,9 @@ export default function SlotMachine() {
   const anySpinning = spinningReels[0] || spinningReels[1] || spinningReels[2]
   const hasResults = results.every(Boolean)
 
-  // Revoke old clip URL on unmount
+  // Revoke old clip URL on unmount + pre-load mp4-muxer so first spin isn't slow
   useEffect(() => {
+    import("mp4-muxer").catch(() => {})
     return () => { clipBlobRef.current = null }
   }, [])
 
@@ -236,30 +237,40 @@ export default function SlotMachine() {
       recorder.start(100)
     } else if (useEncoder) {
       clipExtRef.current = "mp4"
-      const { Muxer: MuxerClass, ArrayBufferTarget } = await import("mp4-muxer")
-      const target = new ArrayBufferTarget()
-      muxer = new MuxerClass({
-        target,
-        video: { codec: "avc", width, height },
-        fastStart: "in-memory",
-      })
-      encoder = new VideoEncoder({
-        output: (chunk, meta) => { muxer!.addVideoChunk(chunk, meta ?? undefined) },
-        error: (e) => console.error("VideoEncoder error:", e),
-      })
-      encoder.configure({
-        codec: "avc1.42001f",
-        width,
-        height,
-        bitrate: 3_000_000,
-        framerate: fps,
-      })
+      try {
+        const { Muxer: MuxerClass, ArrayBufferTarget } = await import("mp4-muxer")
+        const target = new ArrayBufferTarget()
+        muxer = new MuxerClass({
+          target,
+          video: { codec: "avc", width, height },
+          fastStart: "in-memory",
+        })
+        encoder = new VideoEncoder({
+          output: (chunk, meta) => { muxer!.addVideoChunk(chunk, meta ?? undefined) },
+          error: (e) => console.error("VideoEncoder error:", e),
+        })
+        encoder.configure({
+          codec: "avc1.42001f",
+          width,
+          height,
+          bitrate: 3_000_000,
+          framerate: fps,
+        })
+      } catch (e) {
+        console.error("Encoder setup failed:", e)
+        encoder = null
+        muxer = null
+      }
     } else {
       clipExtRef.current = "mp4"
     }
 
-    // --- Trigger the spin (before recording loop so state updates happen) ---
+    // --- Clear previous results and trigger spin ---
+    setResults(["", "", ""])
     setSpinningReels([true, true, true])
+
+    // Wait for React to re-render so first frame shows spinning state, not old results
+    await new Promise((r) => setTimeout(r, 150))
 
     const resolve = (reelIndex: number) => {
       setResults((prev) => {
