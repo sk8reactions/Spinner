@@ -3,15 +3,17 @@
 import { useState, useRef, useCallback, useEffect } from "react"
 import Image from "next/image"
 import { motion, AnimatePresence } from "framer-motion"
-import { Settings2, Download } from "lucide-react"
+import { Download } from "lucide-react"
 import html2canvas from "html2canvas"
 import TrickCard from "./TrickCard"
 import TrickToggles, { TrickTogglesState } from "./TrickToggles"
 
 const SOCIAL_LINKS = [
-  { name: "YouTube", href: "https://www.youtube.com/@sk8reactions", icon: "/icons/youtube.png" },
-  { name: "Instagram", href: "https://www.instagram.com/sk8reactions/", icon: "/icons/instagram.png" },
-  { name: "TikTok", href: "https://www.tiktok.com/@sk8reactions", icon: "/icons/tiktok.png" },
+  { name: "Tre Skool", href: "https://treskoolskateboarding.nz/", icon: "/icons/treskool.png", noInvert: true },
+  { name: "Hamilton Skate Association", href: "https://www.instagram.com/hamilton_skate_association/", icon: "/icons/hsa.png", noInvert: true },
+  { name: "YouTube", href: "https://www.youtube.com/@sk8reactions", icon: "/icons/youtube.png", noInvert: false },
+  { name: "Instagram", href: "https://www.instagram.com/sk8reactions/", icon: "/icons/instagram.png", noInvert: false },
+  { name: "TikTok", href: "https://www.tiktok.com/@sk8reactions", icon: "/icons/tiktok.png", noInvert: false },
 ] as const
 
 const TRICKS_MAP: { [key: string]: string } = {
@@ -457,7 +459,7 @@ export default function SlotMachine() {
 
       {/* Socials + settings */}
       <nav className="socials-bar gradient-flow flex items-center gap-3 mb-6" aria-label="Social links">
-        {SOCIAL_LINKS.map(({ name, href, icon }) => (
+        {SOCIAL_LINKS.map(({ name, href, icon, noInvert }) => (
           <a
             key={name}
             href={href}
@@ -471,7 +473,7 @@ export default function SlotMachine() {
               alt={name}
               width={26}
               height={26}
-              className="w-[26px] h-[26px] object-contain opacity-80 hover:opacity-100 transition-opacity [filter:brightness(0)_invert(1)]"
+              className={`w-[26px] h-[26px] object-contain opacity-80 hover:opacity-100 transition-opacity ${noInvert ? "rounded-md" : "[filter:brightness(0)_invert(1)]"}`}
             />
           </a>
         ))}
@@ -481,7 +483,16 @@ export default function SlotMachine() {
           className="social-icon-btn"
           title="Edit moves"
         >
-          <Settings2 className="w-[26px] h-[26px] text-zinc-300 hover:text-white transition-colors" />
+          <svg width="26" height="26" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" className="opacity-80 hover:opacity-100 transition-opacity">
+            <rect x="4" y="14" width="28" height="6" rx="3" fill="#d4d4d8" />
+            <rect x="6" y="15" width="24" height="4" rx="2" fill="#a1a1aa" />
+            <circle cx="10" cy="23" r="3" fill="#d4d4d8" />
+            <circle cx="10" cy="23" r="1.5" fill="#a1a1aa" />
+            <circle cx="26" cy="23" r="3" fill="#d4d4d8" />
+            <circle cx="26" cy="23" r="1.5" fill="#a1a1aa" />
+            <rect x="7" y="20" width="6" height="2" rx="1" fill="#a1a1aa" />
+            <rect x="23" y="20" width="6" height="2" rx="1" fill="#a1a1aa" />
+          </svg>
         </button>
       </nav>
 
