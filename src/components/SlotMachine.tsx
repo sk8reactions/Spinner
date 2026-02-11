@@ -351,17 +351,35 @@ export default function SlotMachine() {
           setClipReady(true)
         }
       } else if (useEncoder && encoder && muxer) {
-        // ----- PATH B: Safari/iOS — frame capture + encode -----
-        // Fast 300ms loop for capable devices (13 Pro+) → smooth video.
-        // If <3 frames captured, slow fallback with 1.5s timeouts kicks in
-        // to guarantee at least 3 key frames for slower devices (SE, 12 mini).
+        // ----- PATH B: Safari/iOS — device-adaptive frame capture -----
+        // 1) One timed test capture to detect device speed
+        // 2) Fast devices (13 Pro+) → 300ms timeout, many frames
+        //    Slow devices (SE, 12 mini) → 1000ms timeout, fewer but real frames
+        // 3) Safety net if <3 frames: generous 1.5s captures for key moments
 
         const TOTAL_MS = 5000
-        const SNAP_TIMEOUT = 300
         const frames: { imageData: ImageData; timeMs: number }[] = []
+
+        // Device speed test — single capture with 1.5s ceiling
+        let isSlowDevice = false
+        const calStart = performance.now()
+        try {
+          const snap = await Promise.race([
+            snapElement(el, scale, elW, elH),
+            new Promise<never>((_, rej) => setTimeout(() => rej(new Error("cal")), 1500)),
+          ]) as HTMLCanvasElement
+          isSlowDevice = (performance.now() - calStart) > 400
+          ctx.drawImage(snap, 0, 0, width, height)
+          frames.push({ imageData: ctx.getImageData(0, 0, width, height), timeMs: 0 })
+          snap.width = 0; snap.height = 0
+        } catch {
+          isSlowDevice = true // timed out = very slow device
+        }
+
+        const SNAP_TIMEOUT = isSlowDevice ? 1000 : 300
         const t0 = performance.now()
 
-        // Fast capture loop — grab as many frames as the device can handle
+        // Main capture loop with device-appropriate timeout
         while (performance.now() - t0 < TOTAL_MS) {
           const timeMs = performance.now() - t0
           try {
@@ -381,9 +399,7 @@ export default function SlotMachine() {
           await new Promise((r) => setTimeout(r, 4))
         }
 
-        // Slow fallback: if <3 frames, device is too slow for the fast loop.
-        // Capture key moments with generous 1.5s timeouts so slow devices
-        // still produce a usable slideshow-style clip.
+        // Safety net: if <3 frames, try key moments with generous timeouts
         if (frames.length < 3) {
           const keyTimes = [0, 1200, 2400, 3600, 4800]
           for (const holdAt of keyTimes) {
