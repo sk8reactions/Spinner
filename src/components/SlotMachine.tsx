@@ -9,11 +9,11 @@ import TrickCard from "./TrickCard"
 import TrickToggles, { TrickTogglesState } from "./TrickToggles"
 
 const SOCIAL_LINKS = [
-  { name: "Tre Skool", href: "https://treskoolskateboarding.nz/", icon: "/icons/treskool.png", blend: "multiply" as const },
-  { name: "Hamilton Skate Association", href: "https://www.instagram.com/hamilton_skate_association/", icon: "/icons/hsa.png", blend: "multiply" as const },
-  { name: "YouTube", href: "https://www.youtube.com/@sk8reactions", icon: "/icons/youtube.png", blend: "screen" as const },
-  { name: "Instagram", href: "https://www.instagram.com/sk8reactions/", icon: "/icons/instagram.png", blend: "screen" as const },
-  { name: "TikTok", href: "https://www.tiktok.com/@sk8reactions", icon: "/icons/tiktok.png", blend: "screen" as const },
+  { name: "Tre Skool", href: "https://treskoolskateboarding.nz/", icon: "/icons/treskool.png", blend: "none" as const, size: 40 },
+  { name: "Hamilton Skate Association", href: "https://www.instagram.com/hamilton_skate_association/", icon: "/icons/hsa.png", blend: "none" as const, size: 40, circled: true },
+  { name: "YouTube", href: "https://www.youtube.com/@sk8reactions", icon: "/icons/youtube.png", blend: "screen" as const, size: 84 },
+  { name: "Instagram", href: "https://www.instagram.com/sk8reactions/", icon: "/icons/instagram.png", blend: "screen" as const, size: 84 },
+  { name: "TikTok", href: "https://www.tiktok.com/@sk8reactions", icon: "/icons/tiktok.png", blend: "screen" as const, size: 84 },
 ] as const
 
 const TRICKS_MAP: { [key: string]: string } = {
@@ -176,7 +176,7 @@ export default function SlotMachine() {
 
     // Use lower scale on encoder path (iOS) for speed; higher on desktop
     const scale = useCaptureStream ? 2 : 1
-    const fps = useCaptureStream ? 15 : 2
+    const fps = useCaptureStream ? 15 : 5
     const frameInterval = 1000 / fps
     const width = Math.round(elW * scale)
     const height = Math.round(elH * scale)
@@ -251,104 +251,110 @@ export default function SlotMachine() {
     setTimeout(() => resolve(1), 4000)
     setTimeout(() => resolve(2), 6000)
 
-    if (useCaptureStream) {
-      // ----- PATH A: Chrome/Firefox — async capture loop with captureStream -----
-      let capturing = true
-      const captureFrame = async () => {
-        if (!capturing) return
-        try {
-          const snapshot = await snapElement(el, scale, elW, elH)
-          ctx.fillStyle = "#0a0a0a"
-          ctx.fillRect(0, 0, width, height)
-          ctx.drawImage(snapshot, 0, 0, width, height)
-        } catch { /* skip */ }
-        if (capturing) setTimeout(captureFrame, frameInterval)
-      }
-      captureFrame()
-
-      await new Promise((r) => setTimeout(r, 7000))
-      capturing = false
-
-      recorder!.stop()
-      await new Promise<void>((r) => { recorder!.onstop = () => r() })
-      const blob = new Blob(chunks, { type: mimeType })
-      if (blob.size > 0) {
-        clipBlobRef.current = blob
-        setClipReady(true)
-      }
-    } else if (useEncoder && encoder && muxer) {
-      // ----- PATH B: Safari/iOS — 4 key-frame captures then encode -----
-      // Only capture 4 snapshots at key moments to avoid overwhelming iOS memory.
-      // Each frame is stored as lightweight ImageData, then batch-encoded after animation.
-
-      const capturePoints = [
-        { delayMs: 500, holdMs: 2000 },    // All spinning
-        { delayMs: 2500, holdMs: 2000 },   // After first trick (revealed at 2000ms)
-        { delayMs: 4500, holdMs: 2000 },   // After second trick (revealed at 4000ms)
-        { delayMs: 6500, holdMs: 1000 },   // After third trick (revealed at 6000ms)
-      ]
-
-      const storedFrames: { imageData: ImageData; holdMs: number }[] = []
-      const recordStart = performance.now()
-
-      for (const { delayMs, holdMs } of capturePoints) {
-        const elapsed = performance.now() - recordStart
-        if (delayMs > elapsed) {
-          await new Promise((r) => setTimeout(r, delayMs - elapsed))
+    // Wrap entire recording in try/finally so isRecording ALWAYS clears
+    try {
+      if (useCaptureStream) {
+        // ----- PATH A: Chrome/Firefox — async capture loop with captureStream -----
+        let capturing = true
+        const captureFrame = async () => {
+          if (!capturing) return
+          try {
+            const snapshot = await snapElement(el, scale, elW, elH)
+            ctx.fillStyle = "#0a0a0a"
+            ctx.fillRect(0, 0, width, height)
+            ctx.drawImage(snapshot, 0, 0, width, height)
+          } catch { /* skip */ }
+          if (capturing) setTimeout(captureFrame, frameInterval)
         }
+        captureFrame()
+
+        await new Promise((r) => setTimeout(r, 7000))
+        capturing = false
+
+        recorder!.stop()
+        await new Promise<void>((r) => { recorder!.onstop = () => r() })
+        const blob = new Blob(chunks, { type: mimeType })
+        if (blob.size > 0) {
+          clipBlobRef.current = blob
+          setClipReady(true)
+        }
+      } else if (useEncoder && encoder && muxer) {
+        // ----- PATH B: Safari/iOS — adaptive frame capture + encode -----
+        // Captures frames sequentially as fast as html2canvas allows.
+        // Each capture has a timeout to prevent hangs on iOS.
+        // Key moments: ~0.5s (spinning), ~2.5s (move 1), ~4.5s (move 2), ~6.5s (move 3)
+        // with additional frames between them.
+
+        const TOTAL_MS = 7000
+        const SNAP_TIMEOUT = 1500 // max ms per html2canvas call before skipping
+        const frames: { imageData: ImageData; timeMs: number }[] = []
+        const t0 = performance.now()
+
+        // Adaptive capture loop — grab as many frames as iOS can handle
+        while (performance.now() - t0 < TOTAL_MS) {
+          const timeMs = performance.now() - t0
+          try {
+            const snap = await Promise.race([
+              snapElement(el, scale, elW, elH),
+              new Promise<never>((_, rej) =>
+                setTimeout(() => rej(new Error("snap_timeout")), SNAP_TIMEOUT)
+              ),
+            ]) as HTMLCanvasElement
+            ctx.drawImage(snap, 0, 0, width, height)
+            frames.push({ imageData: ctx.getImageData(0, 0, width, height), timeMs })
+            // Free html2canvas canvas immediately
+            snap.width = 0
+            snap.height = 0
+          } catch {
+            // timed out or failed — skip this frame
+          }
+          // Brief pause to let UI & animations breathe
+          await new Promise((r) => setTimeout(r, 50))
+        }
+
+        // Phase 2: Encode captured frames into video
+        if (frames.length > 0) {
+          for (let i = 0; i < frames.length; i++) {
+            const { imageData, timeMs } = frames[i]
+            const nextMs = i < frames.length - 1 ? frames[i + 1].timeMs : TOTAL_MS
+            const durationMs = Math.max(nextMs - timeMs, 100)
+            try {
+              ctx.putImageData(imageData, 0, 0)
+              const vf = new VideoFrame(canvas, {
+                timestamp: Math.round(timeMs * 1000), // microseconds
+                duration: Math.round(durationMs * 1000),
+              })
+              encoder.encode(vf, { keyFrame: true })
+              vf.close()
+            } catch {
+              // skip
+            }
+          }
+        }
+
+        // Drain encoder queue and finalize
+        try { await encoder.flush() } catch { /* flush failed */ }
+        try { encoder.close() } catch { /* close failed */ }
         try {
-          const snapshot = await snapElement(el, scale, elW, elH)
-          ctx.drawImage(snapshot, 0, 0, width, height)
-          const imgData = ctx.getImageData(0, 0, width, height)
-          storedFrames.push({ imageData: imgData, holdMs })
-          // Free the html2canvas canvas immediately
-          snapshot.width = 0
-          snapshot.height = 0
+          muxer.finalize()
+          const buf = (muxer.target as import("mp4-muxer").ArrayBufferTarget).buffer
+          const blob = new Blob([buf], { type: "video/mp4" })
+          if (blob.size > 0) {
+            clipBlobRef.current = blob
+            setClipReady(true)
+          }
         } catch {
-          // skip this frame
+          // muxer finalize failed
         }
+      } else {
+        // No recording support, just wait for spin to finish
+        await new Promise((r) => setTimeout(r, 7000))
       }
-
-      // Wait for spin animation to finish
-      const totalElapsed = performance.now() - recordStart
-      if (totalElapsed < 7000) {
-        await new Promise((r) => setTimeout(r, 7000 - totalElapsed))
-      }
-
-      // Phase 2: Encode stored frames into video
-      let timestamp = 0
-      for (let i = 0; i < storedFrames.length; i++) {
-        const { imageData, holdMs } = storedFrames[i]
-        try {
-          ctx.putImageData(imageData, 0, 0)
-          const vf = new VideoFrame(canvas, {
-            timestamp: timestamp * 1000, // microseconds
-            duration: holdMs * 1000,     // microseconds
-          })
-          encoder.encode(vf, { keyFrame: true })
-          vf.close()
-          timestamp += holdMs
-        } catch {
-          // skip
-        }
-      }
-
-      // Drain encoder queue and finalize
-      await encoder.flush()
-      encoder.close()
-      muxer.finalize()
-      const buf = (muxer.target as import("mp4-muxer").ArrayBufferTarget).buffer
-      const blob = new Blob([buf], { type: "video/mp4" })
-      if (blob.size > 0) {
-        clipBlobRef.current = blob
-        setClipReady(true)
-      }
-    } else {
-      // No recording support, just wait for spin to finish
-      await new Promise((r) => setTimeout(r, 7000))
+    } catch (err) {
+      console.error("Recording error:", err)
+    } finally {
+      setIsRecording(false)
     }
-
-    setIsRecording(false)
   }, [availableTricks, anySpinning, isRecording])
 
   /** Download / share the stored clip */
@@ -432,35 +438,55 @@ export default function SlotMachine() {
 
       {/* Socials + settings */}
       <nav className="socials-bar gradient-flow flex items-center gap-3 mb-6" aria-label="Social links">
-        {SOCIAL_LINKS.map(({ name, href, icon, blend }) => (
-          <a
-            key={name}
-            href={href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="social-icon-btn"
-            title={name}
-          >
-            <Image
-              src={icon}
-              alt={name}
-              width={40}
-              height={40}
-              className={`w-[40px] h-[40px] object-contain opacity-80 hover:opacity-100 transition-opacity rounded-xl ${
-                blend === "screen" ? "mix-blend-screen" :
-                blend === "multiply" ? "mix-blend-multiply" :
-                ""
-              }`}
-            />
-          </a>
-        ))}
+        {SOCIAL_LINKS.map(({ name, href, icon, blend, size, ...rest }) => {
+          const circled = 'circled' in rest && (rest as Record<string, unknown>).circled;
+          return (
+            <a
+              key={name}
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="social-icon-btn overflow-hidden"
+              title={name}
+            >
+              {circled ? (
+                <div
+                  className="rounded-full bg-white flex items-center justify-center opacity-80 hover:opacity-100 transition-opacity"
+                  style={{ width: size, height: size }}
+                >
+                  <Image
+                    src={icon}
+                    alt={name}
+                    width={Math.round(size * 0.95)}
+                    height={Math.round(size * 0.95)}
+                    style={{ width: Math.round(size * 0.95), height: Math.round(size * 0.95) }}
+                    className="object-contain"
+                  />
+                </div>
+              ) : (
+                <Image
+                  src={icon}
+                  alt={name}
+                  width={size}
+                  height={size}
+                  style={{ width: size, height: size }}
+                  className={`object-contain opacity-80 hover:opacity-100 transition-opacity rounded-xl ${
+                    blend === "screen" ? "mix-blend-screen" :
+                    blend === "multiply" ? "mix-blend-multiply" :
+                    ""
+                  }`}
+                />
+              )}
+            </a>
+          );
+        })}
         <button
           type="button"
           onClick={() => setSetupComplete(false)}
           className="social-icon-btn"
           title="Edit moves"
         >
-          <svg width="26" height="26" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" className="opacity-80 hover:opacity-100 transition-opacity">
+          <svg width="46" height="46" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" className="opacity-80 hover:opacity-100 transition-opacity">
             <rect x="4" y="14" width="28" height="6" rx="3" fill="#d4d4d8" />
             <rect x="6" y="15" width="24" height="4" rx="2" fill="#a1a1aa" />
             <circle cx="10" cy="23" r="3" fill="#d4d4d8" />
