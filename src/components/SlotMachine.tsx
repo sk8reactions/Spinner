@@ -196,14 +196,14 @@ export default function SlotMachine() {
     const elW = el.offsetWidth
     const elH = el.offsetHeight
 
-    // Decide recording path — force iOS to encoder path for reliability
+    // Decide recording path — let all platforms try captureStream first
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && 'ontouchend' in document)
-    const useCaptureStream = !isIOS && canUseCaptureStream()
+    const useCaptureStream = canUseCaptureStream()
     const useEncoder = !useCaptureStream && canUseVideoEncoder()
 
-    // Use lower scale on encoder path (iOS) for speed; higher on desktop
-    const scale = useCaptureStream ? 2 : 1
-    const fps = useCaptureStream ? 15 : 5
+    // iOS uses lower scale/fps so html2canvas can keep up; desktop goes full quality
+    const scale = isIOS ? 1 : (useCaptureStream ? 2 : 1)
+    const fps = isIOS ? 4 : (useCaptureStream ? 15 : 5)
     const frameInterval = 1000 / fps
     const width = Math.round(elW * scale)
     const height = Math.round(elH * scale)
