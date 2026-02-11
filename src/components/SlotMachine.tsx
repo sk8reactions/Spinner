@@ -228,40 +228,7 @@ export default function SlotMachine() {
       clipExtRef.current = "mp4"
     }
 
-    let capturing = true
-    const recordStartTime = performance.now()
-    let lastFrameTimestamp = 0
-
-    const captureFrame = async () => {
-      if (!capturing) return
-      try {
-        const snapshot = await snapElement(el, scale, elW, elH)
-        ctx.fillStyle = "#0a0a0a"
-        ctx.fillRect(0, 0, width, height)
-        ctx.drawImage(snapshot, 0, 0, width, height)
-
-        // For encoder path, use real wall-clock elapsed time as timestamp
-        if (useEncoder && encoder && encoder.state === "configured") {
-          const elapsed = performance.now() - recordStartTime
-          const timestampUs = Math.round(elapsed * 1000) // ms -> microseconds
-          // Ensure timestamps are strictly increasing
-          const safeTimestamp = Math.max(timestampUs, lastFrameTimestamp + 1000)
-          lastFrameTimestamp = safeTimestamp
-          const frame = new VideoFrame(canvas, {
-            timestamp: safeTimestamp,
-            duration: Math.round(frameInterval * 1000), // frame duration in us
-          })
-          encoder.encode(frame, { keyFrame: elapsed < 100 }) // first frame = keyframe
-          frame.close()
-        }
-      } catch {
-        // skip frame
-      }
-      if (capturing) setTimeout(captureFrame, frameInterval)
-    }
-    captureFrame()
-
-    // --- Trigger the spin ---
+    // --- Trigger the spin (before recording loop so state updates happen) ---
     setSpinningReels([true, true, true])
 
     const resolve = (reelIndex: number) => {
@@ -281,30 +248,104 @@ export default function SlotMachine() {
     setTimeout(() => resolve(1), 4000)
     setTimeout(() => resolve(2), 6000)
 
-    // Record for 7 seconds total
-    await new Promise((r) => setTimeout(r, 7000))
+    if (useCaptureStream) {
+      // ----- PATH A: Chrome/Firefox — async capture loop with captureStream -----
+      let capturing = true
+      const captureFrame = async () => {
+        if (!capturing) return
+        try {
+          const snapshot = await snapElement(el, scale, elW, elH)
+          ctx.fillStyle = "#0a0a0a"
+          ctx.fillRect(0, 0, width, height)
+          ctx.drawImage(snapshot, 0, 0, width, height)
+        } catch { /* skip */ }
+        if (capturing) setTimeout(captureFrame, frameInterval)
+      }
+      captureFrame()
 
-    // --- Stop recording ---
-    capturing = false
+      await new Promise((r) => setTimeout(r, 7000))
+      capturing = false
 
-    let blob: Blob | null = null
-
-    if (useCaptureStream && recorder) {
-      recorder.stop()
+      recorder!.stop()
       await new Promise<void>((r) => { recorder!.onstop = () => r() })
-      blob = new Blob(chunks, { type: mimeType })
+      const blob = new Blob(chunks, { type: mimeType })
+      if (blob.size > 0) {
+        clipBlobRef.current = blob
+        setClipReady(true)
+      }
     } else if (useEncoder && encoder && muxer) {
+      // ----- PATH B: Safari/iOS — sequential capture, then encode -----
+      // Capture frames sequentially; html2canvas is slow on iOS (~300-800ms per call)
+      // so we capture as many as we can in 7 seconds with real timestamps
+      const totalDurationMs = 7000
+      const recordStart = performance.now()
+      let frameIdx = 0
+
+      while (performance.now() - recordStart < totalDurationMs) {
+        const frameStart = performance.now()
+        try {
+          const snapshot = await snapElement(el, scale, elW, elH)
+          ctx.fillStyle = "#0a0a0a"
+          ctx.fillRect(0, 0, width, height)
+          ctx.drawImage(snapshot, 0, 0, width, height)
+
+          const elapsedMs = performance.now() - recordStart
+          const timestampUs = Math.round(elapsedMs * 1000)
+
+          // Calculate duration: time until next frame, or remaining time if last frame
+          const remainingMs = totalDurationMs - elapsedMs
+          const frameDurUs = Math.round(Math.min(500, remainingMs) * 1000)
+
+          if (encoder.state === "configured") {
+            const vf = new VideoFrame(canvas, {
+              timestamp: timestampUs,
+              duration: Math.max(frameDurUs, 33000), // min ~33ms
+            })
+            encoder.encode(vf, { keyFrame: frameIdx === 0 })
+            vf.close()
+            frameIdx++
+          }
+        } catch {
+          // skip frame
+        }
+        // Small yield to let UI update (trick reveals happen via setTimeout)
+        const elapsed = performance.now() - frameStart
+        if (elapsed < 100) {
+          await new Promise((r) => setTimeout(r, 50))
+        }
+      }
+
+      // Add one final frame covering any remaining time
+      try {
+        const snapshot = await snapElement(el, scale, elW, elH)
+        ctx.fillStyle = "#0a0a0a"
+        ctx.fillRect(0, 0, width, height)
+        ctx.drawImage(snapshot, 0, 0, width, height)
+        const finalTs = Math.round(totalDurationMs * 1000)
+        if (encoder.state === "configured") {
+          const vf = new VideoFrame(canvas, {
+            timestamp: finalTs,
+            duration: 500_000, // 500ms hold
+          })
+          encoder.encode(vf, { keyFrame: false })
+          vf.close()
+        }
+      } catch { /* skip */ }
+
       await encoder.flush()
       encoder.close()
       muxer.finalize()
       const buf = (muxer.target as import("mp4-muxer").ArrayBufferTarget).buffer
-      blob = new Blob([buf], { type: "video/mp4" })
+      const blob = new Blob([buf], { type: "video/mp4" })
+      if (blob.size > 0) {
+        clipBlobRef.current = blob
+        setClipReady(true)
+      }
+    } else {
+      // No recording support, just wait for spin to finish
+      await new Promise((r) => setTimeout(r, 7000))
     }
 
-    if (blob && blob.size > 0) {
-      clipBlobRef.current = blob
-      setClipReady(true)
-    }
     setIsRecording(false)
   }, [availableTricks, anySpinning, isRecording])
 
@@ -352,7 +393,7 @@ export default function SlotMachine() {
             <div className="flex flex-col items-center gap-2">
               <Image src="/sk8reactions-header.png" alt="@sk8reactions" width={800} height={160} className="w-full h-auto object-contain" priority />
               <h2 className="text-heading text-2xl">Set your move list</h2>
-              <p className="text-muted text-sm">Pick stances and moves to randomize</p>
+              <p className="text-muted text-sm">Pick stances and moves to spin</p>
             </div>
             <div className="flex-1 overflow-y-auto min-h-0 rounded-xl gradient-flow p-4 border border-white/[0.06]">
               <TrickToggles onTogglesChange={setTrickToggles} />
