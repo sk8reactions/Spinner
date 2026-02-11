@@ -7,9 +7,15 @@ export const metadata: Metadata = {
   title: "Spin 3 Random Moves",
   description: "Pick your moves, spin, stomp the line.",
   openGraph: {
+    type: "website",
+    url: "https://sk8reactions.cloud",
     title: "3 Random Moves",
     description: "Pick your moves, spin, stomp the line.",
-    images: [{ url: "/og-image.png?v=8", width: 1200, height: 630 }],
+    siteName: "SK8REACTIONS",
+    locale: "en_US",
+    images: [
+      { url: "/og-image.png?v=8", width: 1200, height: 630, alt: "SK8REACTIONS — 3 Random Moves" },
+    ],
   },
   twitter: {
     card: "summary_large_image",
