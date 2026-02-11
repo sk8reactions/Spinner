@@ -155,7 +155,7 @@ export default function TrickCard({
       ) : result ? (
         <p className="trick-text-gold font-bold text-2xl sm:text-3xl text-center leading-tight tracking-wide uppercase">{result}</p>
       ) : (
-        <span className="text-sm trick-text opacity-50">Press Spin</span>
+        <span className="text-sm opacity-0 select-none">&nbsp;</span>
       )}
 
       {/* Rolling skateboard along the bottom */}
