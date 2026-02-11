@@ -285,7 +285,7 @@ export default function SlotMachine() {
         // Aggressive capture timing to maximize frame count.
 
         const TOTAL_MS = 5000
-        const SNAP_TIMEOUT = 800 // tight timeout per capture
+        const SNAP_TIMEOUT = 400 // tight timeout per capture
         const frames: { imageData: ImageData; timeMs: number }[] = []
         const t0 = performance.now()
 
@@ -308,7 +308,7 @@ export default function SlotMachine() {
             // timed out or failed — skip this frame
           }
           // Minimal pause — just enough for UI to update
-          await new Promise((r) => setTimeout(r, 10))
+          await new Promise((r) => setTimeout(r, 5))
         }
 
         // Phase 2: Encode captured frames into video
