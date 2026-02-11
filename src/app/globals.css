@@ -5,8 +5,8 @@
 @font-face {
   font-family: "Facon";
   src: url("/fonts/facon-bold-italic.ttf") format("truetype");
-  font-weight: 700;
-  font-style: italic;
+  font-weight: 100 900;
+  font-style: normal italic;
   font-display: swap;
 }
 
