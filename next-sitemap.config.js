@@ -1,7 +1,7 @@
 /** @type {import('next-sitemap').IConfig} */
 module.exports = {
   siteUrl: "https://www.sk8reactions.cloud",
-  generateRobotsTxt: true,
+  generateRobotsTxt: false,
   sitemapSize: 7000,
   exclude: [
     "/icon",

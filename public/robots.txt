@@ -1,9 +1,4 @@
-# *
 User-agent: *
 Allow: /
 
-# Host
-Host: https://www.sk8reactions.cloud
-
-# Sitemaps
 Sitemap: https://www.sk8reactions.cloud/sitemap.xml
