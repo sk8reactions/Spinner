@@ -32,7 +32,7 @@ const TRICKS_MAP: { [key: string]: string } = {
   bs180Kickflip: "BS 180 Kickflip",
   fs180Heelflip: "FS 180 Heelflip",
   bs180Heelflip: "BS 180 Heelflip",
-  treFlip: "Tre Flip",
+  treFlip: "360 Flip",
   impossible: "Impossible",
   fsBigspin: "FS Bigspin",
   bsBigspin: "BS Bigspin",
