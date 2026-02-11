@@ -270,12 +270,12 @@ export default function SlotMachine() {
       })
     }
 
-    setTimeout(() => resolve(0), 3000)
-    setTimeout(() => resolve(1), 6000)
-    setTimeout(() => resolve(2), 9000)
+    setTimeout(() => resolve(0), 2000)
+    setTimeout(() => resolve(1), 4000)
+    setTimeout(() => resolve(2), 6000)
 
-    // Wait for all reels + 1.5s hold on the final result
-    await new Promise((r) => setTimeout(r, 10500))
+    // Record for 7 seconds total
+    await new Promise((r) => setTimeout(r, 7000))
 
     // --- Stop recording ---
     capturing = false
