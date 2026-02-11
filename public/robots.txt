@@ -1,10 +1,9 @@
-# Allow all crawlers for link previews (Facebook, Twitter, etc.)
+# *
 User-agent: *
 Allow: /
 
-# Explicitly allow Facebook's scraper for Open Graph
-User-agent: facebookexternalhit
-Allow: /
+# Host
+Host: https://www.sk8reactions.cloud
 
-User-agent: Facebot
-Allow: /
+# Sitemaps
+Sitemap: https://www.sk8reactions.cloud/sitemap.xml
