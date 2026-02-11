@@ -488,8 +488,8 @@ export default function SlotMachine() {
             transition={{ duration: 0.3, ease: "easeOut" }}
             className="glass-panel-elevated relative z-10 w-full max-w-lg p-5 sm:p-7 max-h-[90vh] flex flex-col gap-4"
           >
-            <div className="flex flex-col items-center gap-2">
-              <Image src="/sk8reactions-header.png" alt="@sk8reactions" width={800} height={160} className="w-full h-auto object-contain" priority />
+            <div className="flex flex-col items-center gap-2 -mx-2 sm:-mx-3">
+              <Image src="/sk8reactions-header.png" alt="@sk8reactions" width={1000} height={200} className="w-full h-auto object-contain scale-110" priority />
               <h2 className="text-heading text-2xl">Set your move list</h2>
             </div>
             <div className="flex-1 overflow-y-auto min-h-0 rounded-xl gradient-flow p-4 border border-white/[0.06]">
@@ -588,11 +588,8 @@ export default function SlotMachine() {
         <Image src="/spin-btn.png" alt="Spin" width={600} height={140} className="h-[101px] w-auto object-contain pointer-events-none relative z-[1]" />
       </motion.button>
 
-      {/* === Recording zone: logo + trick slots === */}
-      <div ref={recordZoneRef} className="w-full flex flex-col items-center gap-2 pt-1 px-1 pb-4 rounded-lg" style={{ background: "#0a0a0a" }}>
-        {/* Logo header for the clip */}
-        <Image src="/sk8reactions-header.png" alt="@sk8reactions" width={800} height={160} className="w-full h-auto object-contain" priority />
-
+      {/* === Recording zone: trick slots + logo === */}
+      <div ref={recordZoneRef} className="w-full flex flex-col items-center gap-2 pt-2 px-1 pb-2 rounded-lg" style={{ background: "#0a0a0a" }}>
         {/* 3 Trick Slots */}
         <div className="w-full space-y-2">
           {[0, 1, 2].map((i) => (
@@ -605,8 +602,8 @@ export default function SlotMachine() {
           ))}
         </div>
 
-        {/* Bottom spacing for recording */}
-        <div className="h-2" />
+        {/* Logo footer for the clip */}
+        <Image src="/sk8reactions-header.png" alt="@sk8reactions" width={1000} height={200} className="w-full h-auto object-contain scale-110 mt-1" priority />
       </div>
       {/* === End recording zone === */}
 
@@ -646,15 +643,6 @@ export default function SlotMachine() {
         )}
       </AnimatePresence>
 
-      {/* Footer */}
-      <a
-        href="https://sk8reactions.cloud"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-dim text-[10px] tracking-[0.15em] uppercase mt-8 opacity-50 hover:opacity-80 transition-opacity"
-      >
-        @sk8reactions
-      </a>
     </div>
   )
 }
