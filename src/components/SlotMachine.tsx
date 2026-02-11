@@ -196,14 +196,14 @@ export default function SlotMachine() {
     const elW = el.offsetWidth
     const elH = el.offsetHeight
 
-    // Decide recording path — let all platforms try captureStream first
+    // Decide recording path — force iOS to encoder path
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && 'ontouchend' in document)
-    const useCaptureStream = canUseCaptureStream()
+    const useCaptureStream = !isIOS && canUseCaptureStream()
     const useEncoder = !useCaptureStream && canUseVideoEncoder()
 
-    // iOS uses lower scale/fps so html2canvas can keep up; desktop goes full quality
-    const scale = isIOS ? 1 : (useCaptureStream ? 2 : 1)
-    const fps = isIOS ? 4 : (useCaptureStream ? 15 : 5)
+    // Desktop uses high quality; iOS uses scale 1 for speed
+    const scale = useCaptureStream ? 2 : 1
+    const fps = useCaptureStream ? 15 : 5
     const frameInterval = 1000 / fps
     const width = Math.round(elW * scale)
     const height = Math.round(elH * scale)
@@ -312,7 +312,7 @@ export default function SlotMachine() {
         // Aggressive capture timing to maximize frame count.
 
         const TOTAL_MS = 5000
-        const SNAP_TIMEOUT = 250 // tight timeout per capture
+        const SNAP_TIMEOUT = 400 // tight timeout per capture
         const frames: { imageData: ImageData; timeMs: number }[] = []
         const t0 = performance.now()
 
@@ -336,6 +336,7 @@ export default function SlotMachine() {
           }
           // Minimal pause — just enough for UI to update
           await new Promise((r) => setTimeout(r, 4))
+
         }
 
         // Phase 2: Encode captured frames into video
