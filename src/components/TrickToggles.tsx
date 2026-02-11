@@ -29,6 +29,22 @@ export interface TrickTogglesState {
     impossible: boolean
     fsBigspin: boolean
     bsBigspin: boolean
+    fsTailslide: boolean
+    bsTailslide: boolean
+    fsNoseslide: boolean
+    bsNoseslide: boolean
+    fs5050: boolean
+    bs5050: boolean
+    fs50: boolean
+    bs50: boolean
+    fsCrook: boolean
+    bsCrook: boolean
+    fsSmith: boolean
+    bsSmith: boolean
+    fsFeeble: boolean
+    bsFeeble: boolean
+    fsBlunt: boolean
+    bsBlunt: boolean
   }
 }
 
@@ -59,6 +75,22 @@ export default function TrickToggles({ onTogglesChange }: TrickTogglesProps) {
       impossible: false,
       fsBigspin: false,
       bsBigspin: false,
+      fsTailslide: false,
+      bsTailslide: false,
+      fsNoseslide: false,
+      bsNoseslide: false,
+      fs5050: false,
+      bs5050: false,
+      fs50: false,
+      bs50: false,
+      fsCrook: false,
+      bsCrook: false,
+      fsSmith: false,
+      bsSmith: false,
+      fsFeeble: false,
+      bsFeeble: false,
+      fsBlunt: false,
+      bsBlunt: false,
     },
   })
 
@@ -68,6 +100,12 @@ export default function TrickToggles({ onTogglesChange }: TrickTogglesProps) {
     "varialKickflip", "varialHeelflip", "hardflip", "inwardHeelflip",
     "fs180Kickflip", "bs180Kickflip", "fs180Heelflip", "bs180Heelflip",
     "treFlip", "impossible", "fsBigspin", "bsBigspin"
+  ]
+  const allGrindsTricks = [
+    "fsTailslide", "bsTailslide", "fsNoseslide", "bsNoseslide",
+    "fs5050", "bs5050", "fs50", "bs50",
+    "fsCrook", "bsCrook", "fsSmith", "bsSmith",
+    "fsFeeble", "bsFeeble", "fsBlunt", "bsBlunt"
   ]
 
   const isAllSelected = (keys: string[], category: keyof TrickTogglesState) =>
@@ -108,9 +146,10 @@ export default function TrickToggles({ onTogglesChange }: TrickTogglesProps) {
     stance: false,
     basic: false,
     advanced: false,
+    grinds: false,
   })
 
-  const toggleSection = (section: 'stance' | 'basic' | 'advanced') => {
+  const toggleSection = (section: 'stance' | 'basic' | 'advanced' | 'grinds') => {
     setOpenSections(prev => ({ ...prev, [section]: !prev[section] }))
   }
 
@@ -123,6 +162,14 @@ export default function TrickToggles({ onTogglesChange }: TrickTogglesProps) {
     fs180Heelflip: "FS 180 Heelflip", bs180Heelflip: "BS 180 Heelflip",
     treFlip: "Tre Flip", impossible: "Impossible",
     fsBigspin: "FS Bigspin", bsBigspin: "BS Bigspin",
+    fsTailslide: "FS Tailslide", bsTailslide: "BS Tailslide",
+    fsNoseslide: "FS Noseslide", bsNoseslide: "BS Noseslide",
+    fs5050: "FS 50-50", bs5050: "BS 50-50",
+    fs50: "FS 5-0", bs50: "BS 5-0",
+    fsCrook: "FS Crook", bsCrook: "BS Crook",
+    fsSmith: "FS Smith", bsSmith: "BS Smith",
+    fsFeeble: "FS Feeble", bsFeeble: "BS Feeble",
+    fsBlunt: "FS Blunt", bsBlunt: "BS Blunt",
   }
 
   const SectionHeader = ({
@@ -132,7 +179,7 @@ export default function TrickToggles({ onTogglesChange }: TrickTogglesProps) {
     category,
   }: {
     label: string
-    section: 'stance' | 'basic' | 'advanced'
+    section: 'stance' | 'basic' | 'advanced' | 'grinds'
     allKeys: string[]
     category: keyof TrickTogglesState
   }) => (
@@ -219,6 +266,23 @@ export default function TrickToggles({ onTogglesChange }: TrickTogglesProps) {
         {openSections.advanced && (
           <div className="grid grid-cols-2 gap-0.5 mt-1 pl-4 max-h-52 overflow-y-auto">
             {allAdvancedTricks.map((key) => (
+              <ToggleItem
+                key={key}
+                label={trickLabels[key]}
+                checked={toggles.tricks[key as keyof typeof toggles.tricks]}
+                onChange={() => handleToggleChange("tricks", key)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Grinds & Slides */}
+      <div>
+        <SectionHeader label="Grinds & Slides" section="grinds" allKeys={allGrindsTricks} category="tricks" />
+        {openSections.grinds && (
+          <div className="grid grid-cols-2 gap-0.5 mt-1 pl-4 max-h-52 overflow-y-auto">
+            {allGrindsTricks.map((key) => (
               <ToggleItem
                 key={key}
                 label={trickLabels[key]}

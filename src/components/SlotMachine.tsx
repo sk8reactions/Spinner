@@ -36,6 +36,22 @@ const TRICKS_MAP: { [key: string]: string } = {
   impossible: "Impossible",
   fsBigspin: "FS Bigspin",
   bsBigspin: "BS Bigspin",
+  fsTailslide: "FS Tailslide",
+  bsTailslide: "BS Tailslide",
+  fsNoseslide: "FS Noseslide",
+  bsNoseslide: "BS Noseslide",
+  fs5050: "FS 50-50",
+  bs5050: "BS 50-50",
+  fs50: "FS 5-0",
+  bs50: "BS 5-0",
+  fsCrook: "FS Crook",
+  bsCrook: "BS Crook",
+  fsSmith: "FS Smith",
+  bsSmith: "BS Smith",
+  fsFeeble: "FS Feeble",
+  bsFeeble: "BS Feeble",
+  fsBlunt: "FS Blunt",
+  bsBlunt: "BS Blunt",
 }
 
 function buildAvailableTricks(toggles: TrickTogglesState): string[] {
@@ -144,6 +160,10 @@ export default function SlotMachine() {
       hardflip: false, inwardHeelflip: false, fs180Kickflip: false, bs180Kickflip: false,
       fs180Heelflip: false, bs180Heelflip: false, treFlip: false, impossible: false,
       fsBigspin: false, bsBigspin: false,
+      fsTailslide: false, bsTailslide: false, fsNoseslide: false, bsNoseslide: false,
+      fs5050: false, bs5050: false, fs50: false, bs50: false,
+      fsCrook: false, bsCrook: false, fsSmith: false, bsSmith: false,
+      fsFeeble: false, bsFeeble: false, fsBlunt: false, bsBlunt: false,
     },
   })
 
