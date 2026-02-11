@@ -1,0 +1,338 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: "Facon";
+  src: url("/fonts/facon-bold-italic.ttf") format("truetype");
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+:root {
+  --foreground-rgb: 255, 255, 255;
+  --bg-primary: #0a0a0a;
+  --bg-card: rgba(255, 255, 255, 0.04);
+  --bg-card-hover: rgba(255, 255, 255, 0.07);
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-accent: rgba(255, 255, 255, 0.15);
+  --text-primary: #ffffff;
+  --text-secondary: #a1a1aa;
+  --text-muted: #71717a;
+  --accent-red: #ef4444;
+  --accent-gold: #f5c542;
+  --accent-gold-dim: #b8860b;
+  --glass-bg: rgba(255, 255, 255, 0.03);
+  --glass-border: rgba(255, 255, 255, 0.06);
+}
+
+/* Custom Facon typography */
+body {
+  font-family: "Facon", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  color: var(--text-primary);
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--bg-primary);
+  overflow-x: hidden;
+}
+
+/* Background is now a video element in page.tsx */
+
+/* ===== TEXT CLASSES ===== */
+
+/* Primary heading – clean white, tight tracking */
+.text-heading {
+  color: var(--text-primary);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+/* Brand text – gold accent */
+.text-brand {
+  color: var(--accent-gold);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+/* Secondary / muted text */
+.text-muted {
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
+.text-dim {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+/* ===== GLASS PANELS ===== */
+
+.glass-panel {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Trick card panel – uses shared gradient-flow */
+.trick-panel {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+}
+
+/* Red glowing text for spinning / placeholder */
+.trick-text {
+  color: #ef4444;
+  text-shadow:
+    0 0 8px rgba(239, 68, 68, 0.6),
+    0 0 20px rgba(239, 68, 68, 0.3),
+    0 0 40px rgba(239, 68, 68, 0.1);
+}
+
+/* Gold glowing text for selected trick names */
+.trick-text-gold {
+  color: #f5c542;
+  text-shadow:
+    0 0 8px rgba(245, 197, 66, 0.6),
+    0 0 20px rgba(245, 197, 66, 0.3),
+    0 0 40px rgba(245, 197, 66, 0.1);
+}
+
+/* Rolling skateboard — Shuv-it variant: rotateY 360 spin at midpoint (no flip) */
+@keyframes skate-roll-shuvit {
+  0%   { left: -20px; transform: scaleX(1) translateY(0) perspective(100px) rotateY(0deg); }
+  20%  { left: calc(40% - 10px); transform: scaleX(1) translateY(0) perspective(100px) rotateY(0deg); }
+  22%  { left: calc(45% - 10px); transform: scaleX(1) translateY(-8px) perspective(100px) rotateY(0deg); }
+  25%  { left: calc(50% - 15px); transform: scaleX(1) translateY(-12px) perspective(100px) rotateY(180deg); }
+  28%  { left: calc(55% - 10px); transform: scaleX(1) translateY(-8px) perspective(100px) rotateY(360deg); }
+  30%  { left: calc(60% - 10px); transform: scaleX(1) translateY(0) perspective(100px) rotateY(360deg); }
+  48%  { left: calc(100% - 10px); transform: scaleX(1) translateY(0) perspective(100px) rotateY(360deg); }
+  50%  { left: calc(100% - 10px); transform: scaleX(-1) translateY(0) perspective(100px) rotateY(360deg); }
+  70%  { left: calc(60% - 10px); transform: scaleX(-1) translateY(0) perspective(100px) rotateY(360deg); }
+  72%  { left: calc(55% - 10px); transform: scaleX(-1) translateY(-8px) perspective(100px) rotateY(360deg); }
+  75%  { left: calc(50% - 15px); transform: scaleX(-1) translateY(-12px) perspective(100px) rotateY(540deg); }
+  78%  { left: calc(45% - 10px); transform: scaleX(-1) translateY(-8px) perspective(100px) rotateY(720deg); }
+  80%  { left: calc(40% - 10px); transform: scaleX(-1) translateY(0) perspective(100px) rotateY(720deg); }
+  98%  { left: -20px; transform: scaleX(-1) translateY(0) perspective(100px) rotateY(720deg); }
+  100% { left: -20px; transform: scaleX(1) translateY(0) perspective(100px) rotateY(0deg); }
+}
+
+/* Rolling skateboard — Kickflip variant: flat rotate at midpoint */
+@keyframes skate-roll-kickflip {
+  0%   { left: -20px; transform: scaleX(1) translateY(0) rotate(0deg); }
+  20%  { left: calc(40% - 10px); transform: scaleX(1) translateY(0) rotate(0deg); }
+  22%  { left: calc(45% - 10px); transform: scaleX(1) translateY(-10px) rotate(0deg); }
+  25%  { left: calc(50% - 15px); transform: scaleX(1) translateY(-14px) rotate(180deg); }
+  28%  { left: calc(55% - 10px); transform: scaleX(1) translateY(-10px) rotate(360deg); }
+  30%  { left: calc(60% - 10px); transform: scaleX(1) translateY(0) rotate(360deg); }
+  48%  { left: calc(100% - 10px); transform: scaleX(1) translateY(0) rotate(360deg); }
+  50%  { left: calc(100% - 10px); transform: scaleX(-1) translateY(0) rotate(360deg); }
+  70%  { left: calc(60% - 10px); transform: scaleX(-1) translateY(0) rotate(360deg); }
+  72%  { left: calc(55% - 10px); transform: scaleX(-1) translateY(-10px) rotate(360deg); }
+  75%  { left: calc(50% - 15px); transform: scaleX(-1) translateY(-14px) rotate(540deg); }
+  78%  { left: calc(45% - 10px); transform: scaleX(-1) translateY(-10px) rotate(720deg); }
+  80%  { left: calc(40% - 10px); transform: scaleX(-1) translateY(0) rotate(720deg); }
+  98%  { left: -20px; transform: scaleX(-1) translateY(0) rotate(720deg); }
+  100% { left: -20px; transform: scaleX(1) translateY(0) rotate(0deg); }
+}
+
+/* Rolling skateboard — Sideways-flip variant: rotateX flip at midpoint (like randomizing spinner) */
+@keyframes skate-roll-sideflip {
+  0%   { left: -20px; transform: scaleX(1) translateY(0) perspective(100px) rotateX(0deg); }
+  20%  { left: calc(40% - 10px); transform: scaleX(1) translateY(0) perspective(100px) rotateX(0deg); }
+  22%  { left: calc(45% - 10px); transform: scaleX(1) translateY(-8px) perspective(100px) rotateX(0deg); }
+  25%  { left: calc(50% - 15px); transform: scaleX(1) translateY(-12px) perspective(100px) rotateX(180deg); }
+  28%  { left: calc(55% - 10px); transform: scaleX(1) translateY(-8px) perspective(100px) rotateX(360deg); }
+  30%  { left: calc(60% - 10px); transform: scaleX(1) translateY(0) perspective(100px) rotateX(360deg); }
+  48%  { left: calc(100% - 10px); transform: scaleX(1) translateY(0) perspective(100px) rotateX(360deg); }
+  50%  { left: calc(100% - 10px); transform: scaleX(-1) translateY(0) perspective(100px) rotateX(360deg); }
+  70%  { left: calc(60% - 10px); transform: scaleX(-1) translateY(0) perspective(100px) rotateX(360deg); }
+  72%  { left: calc(55% - 10px); transform: scaleX(-1) translateY(-8px) perspective(100px) rotateX(360deg); }
+  75%  { left: calc(50% - 15px); transform: scaleX(-1) translateY(-12px) perspective(100px) rotateX(540deg); }
+  78%  { left: calc(45% - 10px); transform: scaleX(-1) translateY(-8px) perspective(100px) rotateX(720deg); }
+  80%  { left: calc(40% - 10px); transform: scaleX(-1) translateY(0) perspective(100px) rotateX(720deg); }
+  98%  { left: -20px; transform: scaleX(-1) translateY(0) perspective(100px) rotateX(720deg); }
+  100% { left: -20px; transform: scaleX(1) translateY(0) perspective(100px) rotateX(0deg); }
+}
+
+@keyframes wheel-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.glass-panel-elevated {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+/* ===== BUTTONS ===== */
+
+/* Primary CTA – pulsing red glow */
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow:
+      0 0 20px rgba(239, 68, 68, 0.4),
+      0 0 40px rgba(239, 68, 68, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+  50% {
+    box-shadow:
+      0 0 30px rgba(239, 68, 68, 0.6),
+      0 0 60px rgba(239, 68, 68, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  }
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #dc2626 0%, #ef4444 50%, #dc2626 100%);
+  color: #fff;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  border: 1px solid rgba(255, 100, 100, 0.3);
+  border-radius: 12px;
+  animation: pulse-glow 2s ease-in-out infinite;
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.1);
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: translateY(0px) scale(0.98);
+}
+
+.btn-primary:disabled {
+  animation: none;
+  opacity: 0.4;
+  cursor: not-allowed;
+  filter: saturate(0.3);
+}
+
+/* Secondary button – ghost style */
+.btn-ghost {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+  font-weight: 500;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  transition: all 0.15s ease;
+}
+
+.btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Accent button – gold outline */
+.btn-accent {
+  background: transparent;
+  color: var(--accent-gold);
+  font-weight: 600;
+  border: 1px solid rgba(245, 197, 66, 0.3);
+  border-radius: 10px;
+  transition: all 0.15s ease;
+}
+
+.btn-accent:hover {
+  background: rgba(245, 197, 66, 0.1);
+  border-color: rgba(245, 197, 66, 0.5);
+}
+
+/* slot-number badge removed — replaced by rolling skateboard */
+
+/* ===== CUSTOM CHECKBOX ===== */
+input[type="checkbox"] {
+  accent-color: var(--accent-gold);
+}
+
+/* ===== SCROLLBAR ===== */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* ===== SHARED SCROLLING GRADIENT ===== */
+@keyframes gradient-scroll {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: -200% 50%; }
+}
+
+.gradient-flow {
+  background: linear-gradient(
+    90deg,
+    #0a0a0a 0%,
+    #1c1c1c 12%,
+    #2e2e2e 25%,
+    #3a3a3a 37%,
+    #2e2e2e 50%,
+    #1c1c1c 62%,
+    #0a0a0a 75%,
+    #1c1c1c 87%,
+    #0a0a0a 100%
+  );
+  background-size: 200% 100%;
+  animation: gradient-scroll 5s linear infinite;
+}
+
+/* ===== SOCIAL NAV BAR ===== */
+.socials-bar {
+  border-radius: 14px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.social-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  box-shadow:
+    0 0 12px rgba(239, 68, 68, 0.3),
+    0 0 24px rgba(239, 68, 68, 0.1);
+  transition: all 0.2s ease;
+}
+
+.social-icon-btn:hover {
+  background: rgba(239, 68, 68, 0.35);
+  border-color: rgba(239, 68, 68, 0.5);
+  box-shadow:
+    0 0 18px rgba(239, 68, 68, 0.5),
+    0 0 36px rgba(239, 68, 68, 0.2);
+  transform: translateY(-1px);
+}
+
+/* Mobile landscape */
+@media (orientation: landscape) and (max-height: 500px) {
+  body {
+    min-height: 100dvh;
+    overflow: hidden;
+  }
+}

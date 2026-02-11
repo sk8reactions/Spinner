@@ -1,0 +1,5 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* This file is intentionally minimal — all styles live in src/app/globals.css */
