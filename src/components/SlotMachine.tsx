@@ -103,6 +103,33 @@ function canUseVideoEncoder(): boolean {
   return typeof VideoEncoder !== "undefined"
 }
 
+/** Animated fire flames around buttons */
+function FlameEffect() {
+  // Generate flame particles distributed along the bottom and sides
+  const flames = Array.from({ length: 18 }, (_, i) => {
+    const colors = ["flame-red", "flame-orange", "flame-yellow"]
+    const color = colors[i % 3]
+    const left = `${(i / 18) * 100}%`
+    const delay = `${(i * 0.15) % 1.2}s`
+    const duration = `${0.8 + (i % 4) * 0.2}s`
+    const size = 6 + (i % 3) * 3
+    return (
+      <span
+        key={i}
+        className={`flame ${color}`}
+        style={{
+          left,
+          width: size,
+          height: size * 2,
+          animationDelay: delay,
+          animationDuration: duration,
+        }}
+      />
+    )
+  })
+  return <div className="btn-flames">{flames}</div>
+}
+
 export default function SlotMachine() {
   const [setupComplete, setSetupComplete] = useState(false)
   const [results, setResults] = useState<string[]>(["", "", ""])
@@ -285,7 +312,7 @@ export default function SlotMachine() {
         // Aggressive capture timing to maximize frame count.
 
         const TOTAL_MS = 5000
-        const SNAP_TIMEOUT = 400 // tight timeout per capture
+        const SNAP_TIMEOUT = 250 // tight timeout per capture
         const frames: { imageData: ImageData; timeMs: number }[] = []
         const t0 = performance.now()
 
@@ -308,7 +335,7 @@ export default function SlotMachine() {
             // timed out or failed — skip this frame
           }
           // Minimal pause — just enough for UI to update
-          await new Promise((r) => setTimeout(r, 5))
+          await new Promise((r) => setTimeout(r, 4))
         }
 
         // Phase 2: Encode captured frames into video
@@ -424,7 +451,8 @@ export default function SlotMachine() {
               className="btn-primary w-full px-4 h-[98px] flex items-center justify-center overflow-visible"
               whileTap={{ scale: 0.97 }}
             >
-              <Image src="/lets-roll.png" alt="Let's Roll" width={600} height={120} className="h-[101px] w-auto object-contain pointer-events-none" />
+              <FlameEffect />
+              <Image src="/lets-roll.png" alt="Let's Roll" width={600} height={120} className="h-[101px] w-auto object-contain pointer-events-none relative z-[1]" />
             </motion.button>
           </motion.div>
         </div>
@@ -506,7 +534,8 @@ export default function SlotMachine() {
         className="btn-primary w-full px-4 h-[98px] flex items-center justify-center mb-4 overflow-visible"
         whileTap={!anySpinning && !isRecording ? { scale: 0.97 } : {}}
       >
-        <Image src="/spin-btn.png" alt="Spin" width={600} height={140} className="h-[101px] w-auto object-contain pointer-events-none" />
+        <FlameEffect />
+        <Image src="/spin-btn.png" alt="Spin" width={600} height={140} className="h-[101px] w-auto object-contain pointer-events-none relative z-[1]" />
       </motion.button>
 
       {/* === Recording zone: logo + trick slots === */}

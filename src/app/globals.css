@@ -202,6 +202,7 @@ body {
 }
 
 .btn-primary {
+  position: relative;
   background: linear-gradient(135deg, #b91c1c 0%, #dc2626 30%, #ef4444 50%, #dc2626 70%, #b91c1c 100%);
   color: #fff;
   font-weight: 700;
@@ -211,6 +212,52 @@ body {
   animation: pulse-glow 1.5s ease-in-out infinite;
   transition: transform 0.15s ease, filter 0.15s ease;
 }
+
+/* Fire flame container */
+.btn-flames {
+  position: absolute;
+  inset: -6px;
+  pointer-events: none;
+  overflow: hidden;
+  border-radius: 16px;
+  z-index: 0;
+}
+
+/* Individual flame particle */
+.flame {
+  position: absolute;
+  bottom: -10px;
+  width: 8px;
+  height: 16px;
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  filter: blur(2px);
+  opacity: 0;
+  animation: flame-rise 1.2s ease-out infinite;
+}
+
+@keyframes flame-rise {
+  0% {
+    opacity: 0.9;
+    transform: translateY(0) scaleX(1) scaleY(1);
+  }
+  30% {
+    opacity: 0.8;
+    transform: translateY(-14px) scaleX(1.1) scaleY(1.2);
+  }
+  60% {
+    opacity: 0.5;
+    transform: translateY(-28px) scaleX(0.8) scaleY(0.9);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-44px) scaleX(0.3) scaleY(0.5);
+  }
+}
+
+/* Flame color variants */
+.flame-red { background: radial-gradient(circle, #ff4500 0%, #ef4444 50%, transparent 100%); }
+.flame-orange { background: radial-gradient(circle, #ff8c00 0%, #ff6600 50%, transparent 100%); }
+.flame-yellow { background: radial-gradient(circle, #ffd700 0%, #ffaa00 50%, transparent 100%); }
 
 .btn-primary:hover:not(:disabled) {
   transform: translateY(-1px);
