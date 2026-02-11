@@ -68,7 +68,19 @@ function pickThreeUnique(tricks: string[]): [string, string, string] {
   return result as [string, string, string]
 }
 
-/** Pick the best supported mime type — prefer mp4, then h264 webm, then vp9 */
+/** Check if we can use the captureStream + MediaRecorder path */
+function canUseCaptureStream(): boolean {
+  try {
+    const testCanvas = document.createElement("canvas")
+    testCanvas.width = 2
+    testCanvas.height = 2
+    return typeof testCanvas.captureStream === "function"
+  } catch {
+    return false
+  }
+}
+
+/** Pick the best supported mime type for MediaRecorder path */
 function getBestMimeType(): { mimeType: string; ext: string } {
   const candidates: { mimeType: string; ext: string }[] = [
     { mimeType: "video/mp4", ext: "mp4" },
@@ -82,6 +94,11 @@ function getBestMimeType(): { mimeType: string; ext: string } {
     if (MediaRecorder.isTypeSupported(c.mimeType)) return c
   }
   return { mimeType: "video/webm", ext: "webm" }
+}
+
+/** Check if WebCodecs VideoEncoder is available (Safari 16.4+, Chrome 94+) */
+function canUseVideoEncoder(): boolean {
+  return typeof VideoEncoder !== "undefined"
 }
 
 export default function SlotMachine() {
@@ -113,6 +130,23 @@ export default function SlotMachine() {
     return () => { clipBlobRef.current = null }
   }, [])
 
+  /** Shared html2canvas snapshot helper */
+  const snapElement = (el: HTMLElement, scale: number, elW: number, elH: number) =>
+    html2canvas(el, {
+      backgroundColor: "#0a0a0a",
+      scale,
+      logging: false,
+      useCORS: true,
+      width: elW,
+      height: elH,
+      windowWidth: document.documentElement.clientWidth,
+      windowHeight: document.documentElement.clientHeight,
+      scrollX: 0,
+      scrollY: 0,
+      removeContainer: true,
+      ignoreElements: (element) => element.tagName === "VIDEO",
+    })
+
   /** Spin + record in one action */
   const spinAll = useCallback(async () => {
     if (anySpinning || isRecording) return
@@ -130,57 +164,89 @@ export default function SlotMachine() {
 
     setIsRecording(true)
 
-    const fps = 15
+    const fps = 10
     const frameInterval = 1000 / fps
-    const { mimeType, ext } = getBestMimeType()
-    clipExtRef.current = ext
-
     const scale = 2
-    const canvas = document.createElement("canvas")
-    // Use el.offsetWidth/Height for stable dimensions (not affected by scroll)
     const elW = el.offsetWidth
     const elH = el.offsetHeight
-    canvas.width = Math.round(elW * scale)
-    canvas.height = Math.round(elH * scale)
+    const width = Math.round(elW * scale)
+    const height = Math.round(elH * scale)
+
+    // Decide recording path
+    const useCaptureStream = canUseCaptureStream()
+    const useEncoder = !useCaptureStream && canUseVideoEncoder()
+
+    // Shared canvas for drawing frames
+    const canvas = document.createElement("canvas")
+    canvas.width = width
+    canvas.height = height
     const ctx = canvas.getContext("2d")!
-
     ctx.fillStyle = "#0a0a0a"
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    ctx.fillRect(0, 0, width, height)
 
-    const stream = canvas.captureStream(fps)
-    const chunks: Blob[] = []
-    const recorder = new MediaRecorder(stream, {
-      mimeType,
-      videoBitsPerSecond: 5_000_000,
-    })
-    recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data) }
-    recorder.start(100)
+    // ----- PATH A: captureStream + MediaRecorder (Chrome/Firefox) -----
+    let recorder: MediaRecorder | null = null
+    let chunks: Blob[] = []
+    let mimeType = ""
+
+    // ----- PATH B: VideoEncoder + mp4-muxer (Safari/iOS) -----
+    let encoder: VideoEncoder | null = null
+    let muxer: import("mp4-muxer").Muxer<import("mp4-muxer").ArrayBufferTarget> | null = null
+
+    if (useCaptureStream) {
+      const best = getBestMimeType()
+      mimeType = best.mimeType
+      clipExtRef.current = best.ext
+
+      const stream = canvas.captureStream(fps)
+      recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 5_000_000 })
+      recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data) }
+      recorder.start(100)
+    } else if (useEncoder) {
+      clipExtRef.current = "mp4"
+      const { Muxer: MuxerClass, ArrayBufferTarget } = await import("mp4-muxer")
+      const target = new ArrayBufferTarget()
+      muxer = new MuxerClass({
+        target,
+        video: { codec: "avc", width, height },
+        fastStart: "in-memory",
+      })
+      encoder = new VideoEncoder({
+        output: (chunk, meta) => { muxer!.addVideoChunk(chunk, meta ?? undefined) },
+        error: (e) => console.error("VideoEncoder error:", e),
+      })
+      encoder.configure({
+        codec: "avc1.42001f",
+        width,
+        height,
+        bitrate: 4_000_000,
+        framerate: fps,
+      })
+    } else {
+      // No recording support — still spin but skip recording
+      clipExtRef.current = "mp4"
+    }
 
     let capturing = true
+    let frameIndex = 0
     const captureFrame = async () => {
       if (!capturing) return
       try {
-        const snapshot = await html2canvas(el, {
-          backgroundColor: "#0a0a0a",
-          scale,
-          logging: false,
-          useCORS: true,
-          width: elW,
-          height: elH,
-          // Use real window size so layout isn't recalculated at a tiny viewport
-          windowWidth: document.documentElement.clientWidth,
-          windowHeight: document.documentElement.clientHeight,
-          scrollX: 0,
-          scrollY: 0,
-          removeContainer: true,
-          ignoreElements: (element) => {
-            // Skip the video background & overlay from capture
-            return element.tagName === "VIDEO"
-          },
-        })
+        const snapshot = await snapElement(el, scale, elW, elH)
         ctx.fillStyle = "#0a0a0a"
-        ctx.fillRect(0, 0, canvas.width, canvas.height)
-        ctx.drawImage(snapshot, 0, 0, canvas.width, canvas.height)
+        ctx.fillRect(0, 0, width, height)
+        ctx.drawImage(snapshot, 0, 0, width, height)
+
+        // For encoder path, feed frame
+        if (useEncoder && encoder && encoder.state === "configured") {
+          const frame = new VideoFrame(canvas, {
+            timestamp: frameIndex * (1_000_000 / fps), // microseconds
+            duration: 1_000_000 / fps,
+          })
+          encoder.encode(frame)
+          frame.close()
+        }
+        frameIndex++
       } catch {
         // skip frame
       }
@@ -213,26 +279,55 @@ export default function SlotMachine() {
 
     // --- Stop recording ---
     capturing = false
-    recorder.stop()
 
-    await new Promise<void>((r) => { recorder.onstop = () => r() })
+    let blob: Blob | null = null
 
-    const blob = new Blob(chunks, { type: mimeType })
-    clipBlobRef.current = blob
-    setClipReady(true)
+    if (useCaptureStream && recorder) {
+      recorder.stop()
+      await new Promise<void>((r) => { recorder!.onstop = () => r() })
+      blob = new Blob(chunks, { type: mimeType })
+    } else if (useEncoder && encoder && muxer) {
+      await encoder.flush()
+      encoder.close()
+      muxer.finalize()
+      const buf = (muxer.target as import("mp4-muxer").ArrayBufferTarget).buffer
+      blob = new Blob([buf], { type: "video/mp4" })
+    }
+
+    if (blob && blob.size > 0) {
+      clipBlobRef.current = blob
+      setClipReady(true)
+    }
     setIsRecording(false)
   }, [availableTricks, anySpinning, isRecording])
 
-  /** Download the stored clip */
-  const handleDownloadClip = useCallback(() => {
+  /** Download / share the stored clip */
+  const handleDownloadClip = useCallback(async () => {
     const blob = clipBlobRef.current
     if (!blob) return
+
+    const filename = `sk8reactions-3tricks.${clipExtRef.current}`
+
+    // iOS Safari: use native share sheet if available (blob download doesn't work)
+    if (navigator.share && /iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+      try {
+        const file = new File([blob], filename, { type: blob.type })
+        await navigator.share({ files: [file] })
+        return
+      } catch {
+        // User cancelled or share failed — fall through to download
+      }
+    }
+
+    // Standard download
     const url = URL.createObjectURL(blob)
     const a = document.createElement("a")
     a.href = url
-    a.download = `sk8reactions-3tricks.${clipExtRef.current}`
+    a.download = filename
+    document.body.appendChild(a)
     a.click()
-    setTimeout(() => URL.revokeObjectURL(url), 1000)
+    document.body.removeChild(a)
+    setTimeout(() => URL.revokeObjectURL(url), 5000)
   }, [])
 
   /* Setup modal */
