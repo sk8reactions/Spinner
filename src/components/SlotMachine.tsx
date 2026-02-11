@@ -424,18 +424,31 @@ export default function SlotMachine() {
   if (!setupComplete) {
     return (
       <AnimatePresence>
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Background video */}
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="absolute inset-0 w-full h-full object-cover"
+          >
+            <source src="/modal-bg.mov" type="video/quicktime" />
+            <source src="/modal-bg.mov" type="video/mp4" />
+          </video>
+          {/* Dark overlay */}
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+
           <motion.div
             initial={{ opacity: 0, y: 20, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.97 }}
             transition={{ duration: 0.3, ease: "easeOut" }}
-            className="glass-panel-elevated w-full max-w-lg p-5 sm:p-7 max-h-[90vh] flex flex-col gap-4"
+            className="glass-panel-elevated relative z-10 w-full max-w-lg p-5 sm:p-7 max-h-[90vh] flex flex-col gap-4"
           >
             <div className="flex flex-col items-center gap-2">
               <Image src="/sk8reactions-header.png" alt="@sk8reactions" width={800} height={160} className="w-full h-auto object-contain" priority />
               <h2 className="text-heading text-2xl">Set your move list</h2>
-              <p className="text-muted text-sm">Pick stances and moves to spin</p>
             </div>
             <div className="flex-1 overflow-y-auto min-h-0 rounded-xl gradient-flow p-4 border border-white/[0.06]">
               <TrickToggles onTogglesChange={setTrickToggles} />
