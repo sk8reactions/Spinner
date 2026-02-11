@@ -268,7 +268,7 @@ export default function SlotMachine() {
         }
         captureFrame()
 
-        await new Promise((r) => setTimeout(r, 7000))
+        await new Promise((r) => setTimeout(r, 8880))
         capturing = false
 
         recorder!.stop()
@@ -285,7 +285,7 @@ export default function SlotMachine() {
         // Key moments: ~0.5s (spinning), ~2.5s (move 1), ~4.5s (move 2), ~6.5s (move 3)
         // with additional frames between them.
 
-        const TOTAL_MS = 7000
+        const TOTAL_MS = 8880
         const SNAP_TIMEOUT = 1500 // max ms per html2canvas call before skipping
         const frames: { imageData: ImageData; timeMs: number }[] = []
         const t0 = performance.now()
@@ -348,7 +348,7 @@ export default function SlotMachine() {
         }
       } else {
         // No recording support, just wait for spin to finish
-        await new Promise((r) => setTimeout(r, 7000))
+        await new Promise((r) => setTimeout(r, 8880))
       }
     } catch (err) {
       console.error("Recording error:", err)
