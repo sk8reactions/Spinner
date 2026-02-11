@@ -29,6 +29,8 @@ export interface TrickTogglesState {
     impossible: boolean
     fsBigspin: boolean
     bsBigspin: boolean
+    fs360Shuv: boolean
+    bs360Shuv: boolean
     fsTailslide: boolean
     bsTailslide: boolean
     fsNoseslide: boolean
@@ -75,6 +77,8 @@ export default function TrickToggles({ onTogglesChange }: TrickTogglesProps) {
       impossible: false,
       fsBigspin: false,
       bsBigspin: false,
+      fs360Shuv: false,
+      bs360Shuv: false,
       fsTailslide: false,
       bsTailslide: false,
       fsNoseslide: false,
@@ -99,7 +103,8 @@ export default function TrickToggles({ onTogglesChange }: TrickTogglesProps) {
   const allAdvancedTricks = [
     "varialKickflip", "varialHeelflip", "hardflip", "inwardHeelflip",
     "fs180Kickflip", "bs180Kickflip", "fs180Heelflip", "bs180Heelflip",
-    "treFlip", "impossible", "fsBigspin", "bsBigspin"
+    "treFlip", "impossible", "fsBigspin", "bsBigspin",
+    "fs360Shuv", "bs360Shuv"
   ]
   const allGrindsTricks = [
     "fsTailslide", "bsTailslide", "fsNoseslide", "bsNoseslide",
@@ -162,6 +167,7 @@ export default function TrickToggles({ onTogglesChange }: TrickTogglesProps) {
     fs180Heelflip: "FS 180 Heelflip", bs180Heelflip: "BS 180 Heelflip",
     treFlip: "360 Flip", impossible: "Impossible",
     fsBigspin: "FS Bigspin", bsBigspin: "BS Bigspin",
+    fs360Shuv: "FS 360 Shuv", bs360Shuv: "BS 360 Shuv",
     fsTailslide: "FS Tailslide", bsTailslide: "BS Tailslide",
     fsNoseslide: "FS Noseslide", bsNoseslide: "BS Noseslide",
     fs5050: "FS 50-50", bs5050: "BS 50-50",
