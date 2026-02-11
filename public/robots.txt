@@ -1,0 +1,10 @@
+# Allow all crawlers for link previews (Facebook, Twitter, etc.)
+User-agent: *
+Allow: /
+
+# Explicitly allow Facebook's scraper for Open Graph
+User-agent: facebookexternalhit
+Allow: /
+
+User-agent: Facebot
+Allow: /
