@@ -478,19 +478,8 @@ export default function SlotMachine() {
     return (
       <AnimatePresence>
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          {/* Background video */}
-          <video
-            autoPlay
-            loop
-            muted
-            playsInline
-            className="absolute inset-0 w-full h-full object-cover"
-          >
-            <source src="/modal-bg.mov" type="video/quicktime" />
-            <source src="/modal-bg.mov" type="video/mp4" />
-          </video>
           {/* Dark overlay */}
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+          <div className="absolute inset-0 bg-black/90" />
 
           <motion.div
             initial={{ opacity: 0, y: 20, scale: 0.97 }}
