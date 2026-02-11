@@ -11,9 +11,9 @@ import TrickToggles, { TrickTogglesState } from "./TrickToggles"
 const SOCIAL_LINKS = [
   { name: "Tre Skool", href: "https://treskoolskateboarding.nz/", icon: "/icons/treskool.png", noInvert: true },
   { name: "Hamilton Skate Association", href: "https://www.instagram.com/hamilton_skate_association/", icon: "/icons/hsa.png", noInvert: true },
-  { name: "YouTube", href: "https://www.youtube.com/@sk8reactions", icon: "/icons/youtube.png", noInvert: false },
-  { name: "Instagram", href: "https://www.instagram.com/sk8reactions/", icon: "/icons/instagram.png", noInvert: false },
-  { name: "TikTok", href: "https://www.tiktok.com/@sk8reactions", icon: "/icons/tiktok.png", noInvert: false },
+  { name: "YouTube", href: "https://www.youtube.com/@sk8reactions", icon: "/icons/youtube.png", noInvert: true },
+  { name: "Instagram", href: "https://www.instagram.com/sk8reactions/", icon: "/icons/instagram.png", noInvert: true },
+  { name: "TikTok", href: "https://www.tiktok.com/@sk8reactions", icon: "/icons/tiktok.png", noInvert: true },
 ] as const
 
 const TRICKS_MAP: { [key: string]: string } = {
