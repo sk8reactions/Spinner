@@ -6,6 +6,9 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://sk8reactions.cloud"),
   title: "Spin 3 Random Moves",
   description: "Pick your moves, spin, stomp the line.",
+  icons: {
+    icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
+  },
   openGraph: {
     type: "website",
     url: "https://sk8reactions.cloud",
