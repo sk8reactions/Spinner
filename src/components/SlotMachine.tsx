@@ -197,14 +197,25 @@ export default function SlotMachine() {
     const elW = el.offsetWidth
     const elH = el.offsetHeight
 
-    // Decide recording path — force iOS to encoder path
+    // Decide recording path
+    // iOS: prefer encoder, fall back to captureStream for older devices without VideoEncoder
+    // Desktop: prefer captureStream, fall back to encoder
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && 'ontouchend' in document)
-    const useCaptureStream = !isIOS && canUseCaptureStream()
-    const useEncoder = !useCaptureStream && canUseVideoEncoder()
+    const hasCaptureStream = canUseCaptureStream()
+    const hasEncoder = canUseVideoEncoder()
+    let useCaptureStream: boolean
+    let useEncoder: boolean
+    if (isIOS) {
+      useEncoder = hasEncoder
+      useCaptureStream = !hasEncoder && hasCaptureStream
+    } else {
+      useCaptureStream = hasCaptureStream
+      useEncoder = !hasCaptureStream && hasEncoder
+    }
 
     // Desktop uses high quality; iOS uses scale 1 for speed
-    const scale = useCaptureStream ? 2 : 1
-    const fps = useCaptureStream ? 15 : 5
+    const scale = (useCaptureStream && !isIOS) ? 2 : 1
+    const fps = (useCaptureStream && !isIOS) ? 15 : 5
     const frameInterval = 1000 / fps
     const width = Math.round(elW * scale)
     const height = Math.round(elH * scale)
@@ -318,16 +329,36 @@ export default function SlotMachine() {
         }
       } else if (useEncoder && encoder && muxer) {
         // ----- PATH B: Safari/iOS — adaptive frame capture + encode -----
-        // Shorter 5s window with 1s between reveals = tighter capture.
-        // Key moments: ~0.5s (spinning), ~1.5s (move 1), ~2.5s (move 2), ~3.5s (move 3)
-        // Aggressive capture timing to maximize frame count.
+        // Calibrates to device speed on the first capture, then adapts timeout.
+        // Slower devices get longer timeouts (fewer frames but guaranteed captures).
+        // Faster devices get tight timeouts (more frames, smoother video).
 
         const TOTAL_MS = 5000
-        const SNAP_TIMEOUT = 400 // tight timeout per capture
         const frames: { imageData: ImageData; timeMs: number }[] = []
         const t0 = performance.now()
 
-        // Adaptive capture loop — grab as many frames as iOS can handle
+        // Phase 1: Calibration capture — generous 2.5s timeout to measure device speed
+        let deviceSpeed = 1000
+        try {
+          const snapStart = performance.now()
+          const snap = await Promise.race([
+            snapElement(el, scale, elW, elH),
+            new Promise<never>((_, rej) => setTimeout(() => rej(new Error("cal_timeout")), 2500)),
+          ]) as HTMLCanvasElement
+          deviceSpeed = performance.now() - snapStart
+          ctx.drawImage(snap, 0, 0, width, height)
+          frames.push({ imageData: ctx.getImageData(0, 0, width, height), timeMs: performance.now() - t0 })
+          snap.width = 0
+          snap.height = 0
+        } catch {
+          // calibration failed — device very slow, use long timeout
+          deviceSpeed = 2500
+        }
+
+        // Adaptive timeout: 1.5x measured speed, clamped 300ms–1500ms
+        const SNAP_TIMEOUT = Math.min(1500, Math.max(300, Math.round(deviceSpeed * 1.5)))
+
+        // Phase 2: Capture remaining frames with adaptive timeout
         while (performance.now() - t0 < TOTAL_MS) {
           const timeMs = performance.now() - t0
           try {
@@ -339,15 +370,26 @@ export default function SlotMachine() {
             ]) as HTMLCanvasElement
             ctx.drawImage(snap, 0, 0, width, height)
             frames.push({ imageData: ctx.getImageData(0, 0, width, height), timeMs })
-            // Free html2canvas canvas immediately
             snap.width = 0
             snap.height = 0
           } catch {
-            // timed out or failed — skip this frame
+            // timed out — skip this frame
           }
-          // Minimal pause — just enough for UI to update
           await new Promise((r) => setTimeout(r, 4))
+        }
 
+        // Safety net: if 0 frames captured, try one final attempt with very long timeout
+        if (frames.length === 0) {
+          try {
+            const snap = await Promise.race([
+              snapElement(el, scale, elW, elH),
+              new Promise<never>((_, rej) => setTimeout(() => rej(new Error("final_timeout")), 3000)),
+            ]) as HTMLCanvasElement
+            ctx.drawImage(snap, 0, 0, width, height)
+            frames.push({ imageData: ctx.getImageData(0, 0, width, height), timeMs: TOTAL_MS })
+            snap.width = 0
+            snap.height = 0
+          } catch { /* even the safety capture failed */ }
         }
 
         // Phase 2: Encode captured frames into video
