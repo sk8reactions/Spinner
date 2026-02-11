@@ -274,58 +274,104 @@ export default function SlotMachine() {
         setClipReady(true)
       }
     } else if (useEncoder && encoder && muxer) {
-      // ----- PATH B: Safari/iOS — fixed-interval keyframe capture -----
-      // html2canvas is very slow & memory-heavy on iOS (~500ms-1s per call).
-      // Capture at scheduled timestamps only (1 per second) to avoid memory exhaustion.
-      const captureTimesMs = [0, 1000, 2000, 2500, 3000, 4000, 4500, 5000, 6000, 6500, 7000]
+      // ----- PATH B: Safari/iOS — two-phase: capture bitmaps, then encode -----
+      // Phase 1: Capture frames as ImageBitmaps at scheduled times.
+      //          Use tiny scale to keep html2canvas fast and avoid memory death.
+      // Phase 2: After spin completes, encode all stored bitmaps into video.
+
+      const iosScale = Math.min(0.6, 360 / elW) // cap at 360px wide
+      const iosW = Math.round(elW * iosScale)
+      const iosH = Math.round(elH * iosScale)
+      // Resize the shared canvas to the small iOS size
+      canvas.width = iosW
+      canvas.height = iosH
+
+      // Re-configure encoder for the smaller size
+      encoder.configure({
+        codec: "avc1.42001f",
+        width: iosW,
+        height: iosH,
+        bitrate: 2_000_000,
+        framerate: 2,
+      })
+      // Also update the muxer dimensions — need to recreate
+      encoder.close()
+      muxer.finalize() // finalize old empty muxer
+      const { Muxer: MuxerClass2, ArrayBufferTarget: ABT2 } = await import("mp4-muxer")
+      const target2 = new ABT2()
+      muxer = new MuxerClass2({
+        target: target2,
+        video: { codec: "avc", width: iosW, height: iosH },
+        fastStart: "in-memory",
+      })
+      encoder = new VideoEncoder({
+        output: (chunk, meta) => { muxer!.addVideoChunk(chunk, meta ?? undefined) },
+        error: (e) => console.error("VideoEncoder error:", e),
+      })
+      encoder.configure({
+        codec: "avc1.42001f",
+        width: iosW,
+        height: iosH,
+        bitrate: 2_000_000,
+        framerate: 2,
+      })
+
+      // Capture times aligned with trick reveals (2s, 4s, 6s)
+      const captureTimes = [0, 1500, 2200, 3500, 4200, 5500, 6200, 7000]
+      const storedFrames: { bitmap: ImageBitmap; timeMs: number }[] = []
       const recordStart = performance.now()
 
-      for (let i = 0; i < captureTimesMs.length; i++) {
-        const targetMs = captureTimesMs[i]
-        // Wait until the target time
-        const now = performance.now() - recordStart
-        if (targetMs > now) {
-          await new Promise((r) => setTimeout(r, targetMs - now))
+      for (const targetMs of captureTimes) {
+        const elapsed = performance.now() - recordStart
+        if (targetMs > elapsed) {
+          await new Promise((r) => setTimeout(r, targetMs - elapsed))
         }
-
         try {
-          const snapshot = await snapElement(el, scale, elW, elH)
-          ctx.fillStyle = "#0a0a0a"
-          ctx.fillRect(0, 0, width, height)
-          ctx.drawImage(snapshot, 0, 0, width, height)
-          // Clean up the snapshot canvas to free iOS memory
+          const snapshot = await html2canvas(el, {
+            backgroundColor: "#0a0a0a",
+            scale: iosScale,
+            logging: false,
+            useCORS: true,
+            width: elW,
+            height: elH,
+            windowWidth: document.documentElement.clientWidth,
+            windowHeight: document.documentElement.clientHeight,
+            scrollX: 0,
+            scrollY: 0,
+          })
+          const bitmap = await createImageBitmap(snapshot)
+          storedFrames.push({ bitmap, timeMs: targetMs })
+          // Immediately free the html2canvas result
           snapshot.width = 0
           snapshot.height = 0
-
-          const timestampUs = targetMs * 1000
-          // Duration extends to the next capture time (or 500ms for the last frame)
-          const nextMs = i < captureTimesMs.length - 1 ? captureTimesMs[i + 1] : targetMs + 500
-          const durationUs = (nextMs - targetMs) * 1000
-
-          if (encoder.state === "configured") {
-            const vf = new VideoFrame(canvas, {
-              timestamp: timestampUs,
-              duration: durationUs,
-            })
-            encoder.encode(vf, { keyFrame: i % 3 === 0 })
-            vf.close()
-          }
         } catch {
-          // skip frame
+          // skip this frame
         }
       }
 
-      // Wait for encoder queue to drain before flushing
-      if (encoder.encodeQueueSize > 0) {
-        await new Promise<void>((r) => {
-          const check = () => {
-            if (encoder!.encodeQueueSize === 0) r()
-            else setTimeout(check, 50)
-          }
-          check()
-        })
+      // Phase 2: encode all stored bitmaps
+      const iosCtx = canvas.getContext("2d")!
+      for (let i = 0; i < storedFrames.length; i++) {
+        const { bitmap, timeMs } = storedFrames[i]
+        const nextMs = i < storedFrames.length - 1 ? storedFrames[i + 1].timeMs : timeMs + 1000
+        try {
+          iosCtx.fillStyle = "#0a0a0a"
+          iosCtx.fillRect(0, 0, iosW, iosH)
+          iosCtx.drawImage(bitmap, 0, 0, iosW, iosH)
+          bitmap.close()
+
+          const vf = new VideoFrame(canvas, {
+            timestamp: timeMs * 1000,
+            duration: (nextMs - timeMs) * 1000,
+          })
+          encoder.encode(vf, { keyFrame: i === 0 })
+          vf.close()
+        } catch {
+          // skip
+        }
       }
 
+      // Drain encoder queue
       await encoder.flush()
       encoder.close()
       muxer.finalize()
