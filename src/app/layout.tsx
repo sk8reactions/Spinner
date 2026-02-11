@@ -2,31 +2,35 @@ import "@/app/globals.css"
 import type { Metadata, Viewport } from "next"
 import type React from "react"
 
-// Use www as canonical — metadata worked when www was production and apex redirected to www
+// Canonical base (www is production; apex redirects to www)
 const canonicalUrl = "https://www.sk8reactions.cloud"
 
 export const metadata: Metadata = {
   metadataBase: new URL(canonicalUrl),
-  title: "Spin 3 Random Moves",
-  description: "Pick your moves, spin, stomp the line.",
-  alternates: {
-    canonical: canonicalUrl,
+  title: {
+    default: "SK8Reactions — Skate Trick Roulette",
+    template: "%s | SK8Reactions",
   },
+  description:
+    "Spin random skate tricks, build challenges, and level up your skate sessions.",
+  alternates: { canonical: canonicalUrl },
   openGraph: {
     type: "website",
     url: canonicalUrl,
-    title: "3 Random Moves",
-    description: "Pick your moves, spin, stomp the line.",
-    siteName: "SK8REACTIONS",
+    title: "SK8Reactions — Skate Trick Roulette",
+    description:
+      "Spin random skate tricks, build challenges, and level up your skate sessions.",
+    siteName: "SK8Reactions",
     locale: "en_US",
     images: [
-      { url: "/og-image.png?v=8", width: 1200, height: 630, alt: "3 Random Moves" },
+      { url: "/og-image.png?v=8", width: 1200, height: 630, alt: "SK8Reactions — 3 Random Moves" },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "3 Random Moves",
-    description: "Pick your moves, spin, stomp the line.",
+    title: "SK8Reactions — Skate Trick Roulette",
+    description:
+      "Spin random skate tricks, build challenges, and level up your skate sessions.",
     images: ["/og-image.png?v=8"],
   },
 }
