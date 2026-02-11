@@ -2,7 +2,8 @@ import "@/app/globals.css"
 import type { Metadata, Viewport } from "next"
 import type React from "react"
 
-const canonicalUrl = "https://sk8reactions.cloud"
+// Use www as canonical — metadata worked when www was production and apex redirected to www
+const canonicalUrl = "https://www.sk8reactions.cloud"
 
 export const metadata: Metadata = {
   metadataBase: new URL(canonicalUrl),
