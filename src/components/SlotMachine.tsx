@@ -247,9 +247,9 @@ export default function SlotMachine() {
       })
     }
 
-    setTimeout(() => resolve(0), 2000)
-    setTimeout(() => resolve(1), 4000)
-    setTimeout(() => resolve(2), 6000)
+    setTimeout(() => resolve(0), 1000)
+    setTimeout(() => resolve(1), 2000)
+    setTimeout(() => resolve(2), 3000)
 
     // Wrap entire recording in try/finally so isRecording ALWAYS clears
     try {
@@ -268,7 +268,7 @@ export default function SlotMachine() {
         }
         captureFrame()
 
-        await new Promise((r) => setTimeout(r, 8880))
+        await new Promise((r) => setTimeout(r, 5000))
         capturing = false
 
         recorder!.stop()
@@ -280,18 +280,16 @@ export default function SlotMachine() {
         }
       } else if (useEncoder && encoder && muxer) {
         // ----- PATH B: Safari/iOS — adaptive frame capture + encode -----
-        // Captures frames sequentially as fast as html2canvas allows.
-        // Each capture has a timeout to prevent hangs on iOS.
-        // Key moments: ~0.5s (spinning), ~2.5s (move 1), ~4.5s (move 2), ~6.5s (move 3)
-        // with additional frames between them.
+        // Shorter 5s window with 1s between reveals = tighter capture.
+        // Key moments: ~0.5s (spinning), ~1.5s (move 1), ~2.5s (move 2), ~3.5s (move 3)
+        // Aggressive capture timing to maximize frame count.
 
-        const TOTAL_MS = 8880
-        const SNAP_TIMEOUT = 1000 // max ms per html2canvas call before skipping
+        const TOTAL_MS = 5000
+        const SNAP_TIMEOUT = 800 // tight timeout per capture
         const frames: { imageData: ImageData; timeMs: number }[] = []
         const t0 = performance.now()
 
         // Adaptive capture loop — grab as many frames as iOS can handle
-        // Tighter timing for more frames per second
         while (performance.now() - t0 < TOTAL_MS) {
           const timeMs = performance.now() - t0
           try {
@@ -309,8 +307,8 @@ export default function SlotMachine() {
           } catch {
             // timed out or failed — skip this frame
           }
-          // Brief pause to let UI & animations breathe
-          await new Promise((r) => setTimeout(r, 20))
+          // Minimal pause — just enough for UI to update
+          await new Promise((r) => setTimeout(r, 10))
         }
 
         // Phase 2: Encode captured frames into video
@@ -349,7 +347,7 @@ export default function SlotMachine() {
         }
       } else {
         // No recording support, just wait for spin to finish
-        await new Promise((r) => setTimeout(r, 8880))
+        await new Promise((r) => setTimeout(r, 5000))
       }
     } catch (err) {
       console.error("Recording error:", err)
