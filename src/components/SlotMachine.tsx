@@ -328,37 +328,16 @@ export default function SlotMachine() {
           setClipReady(true)
         }
       } else if (useEncoder && encoder && muxer) {
-        // ----- PATH B: Safari/iOS — adaptive frame capture + encode -----
-        // Calibrates to device speed on the first capture, then adapts timeout.
-        // Slower devices get longer timeouts (fewer frames but guaranteed captures).
-        // Faster devices get tight timeouts (more frames, smoother video).
+        // ----- PATH B: Safari/iOS — frame capture + encode -----
+        // 400ms timeout works on fast devices (13 Pro+).
+        // Safety net with long timeout ensures slower devices still get a clip.
 
         const TOTAL_MS = 5000
+        const SNAP_TIMEOUT = 400
         const frames: { imageData: ImageData; timeMs: number }[] = []
         const t0 = performance.now()
 
-        // Phase 1: Calibration capture — generous 2.5s timeout to measure device speed
-        let deviceSpeed = 1000
-        try {
-          const snapStart = performance.now()
-          const snap = await Promise.race([
-            snapElement(el, scale, elW, elH),
-            new Promise<never>((_, rej) => setTimeout(() => rej(new Error("cal_timeout")), 2500)),
-          ]) as HTMLCanvasElement
-          deviceSpeed = performance.now() - snapStart
-          ctx.drawImage(snap, 0, 0, width, height)
-          frames.push({ imageData: ctx.getImageData(0, 0, width, height), timeMs: performance.now() - t0 })
-          snap.width = 0
-          snap.height = 0
-        } catch {
-          // calibration failed — device very slow, use long timeout
-          deviceSpeed = 2500
-        }
-
-        // Adaptive timeout: 1.5x measured speed, clamped 300ms–1500ms
-        const SNAP_TIMEOUT = Math.min(1500, Math.max(300, Math.round(deviceSpeed * 1.5)))
-
-        // Phase 2: Capture remaining frames with adaptive timeout
+        // Capture loop — grab as many frames as the device can handle
         while (performance.now() - t0 < TOTAL_MS) {
           const timeMs = performance.now() - t0
           try {
@@ -378,18 +357,23 @@ export default function SlotMachine() {
           await new Promise((r) => setTimeout(r, 4))
         }
 
-        // Safety net: if 0 frames captured, try one final attempt with very long timeout
+        // Safety net: if 0 frames from fast loop, try with generous timeouts
+        // This ensures slower devices (SE, 12 mini) still produce a clip
         if (frames.length === 0) {
-          try {
-            const snap = await Promise.race([
-              snapElement(el, scale, elW, elH),
-              new Promise<never>((_, rej) => setTimeout(() => rej(new Error("final_timeout")), 3000)),
-            ]) as HTMLCanvasElement
-            ctx.drawImage(snap, 0, 0, width, height)
-            frames.push({ imageData: ctx.getImageData(0, 0, width, height), timeMs: TOTAL_MS })
-            snap.width = 0
-            snap.height = 0
-          } catch { /* even the safety capture failed */ }
+          const fallbackTimes = [0, 1500, 3500]
+          for (const holdAt of fallbackTimes) {
+            try {
+              const snap = await Promise.race([
+                snapElement(el, scale, elW, elH),
+                new Promise<never>((_, rej) => setTimeout(() => rej(new Error("fb_timeout")), 2000)),
+              ]) as HTMLCanvasElement
+              ctx.drawImage(snap, 0, 0, width, height)
+              frames.push({ imageData: ctx.getImageData(0, 0, width, height), timeMs: holdAt })
+              snap.width = 0
+              snap.height = 0
+            } catch { /* skip */ }
+            await new Promise((r) => setTimeout(r, 100))
+          }
         }
 
         // Phase 2: Encode captured frames into video
