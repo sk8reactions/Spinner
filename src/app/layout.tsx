@@ -8,13 +8,13 @@ export const metadata: Metadata = {
   openGraph: {
     title: "@sk8reactions — 3 Random Moves",
     description: "Skate trick wheel by @sk8reactions. Pick your moves, spin the wheel, stomp the line.",
-    images: [{ url: "/og-image.png", width: 1200, height: 630 }],
+    images: [{ url: "/og-image.png?v=4", width: 1200, height: 630 }],
   },
   twitter: {
     card: "summary_large_image",
     title: "@sk8reactions — 3 Random Moves",
     description: "Skate trick wheel by @sk8reactions. Pick your moves, spin the wheel, stomp the line.",
-    images: ["/og-image.png"],
+    images: ["/og-image.png?v=4"],
   },
 }
 
