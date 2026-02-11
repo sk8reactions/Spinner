@@ -9,11 +9,11 @@ import TrickCard from "./TrickCard"
 import TrickToggles, { TrickTogglesState } from "./TrickToggles"
 
 const SOCIAL_LINKS = [
-  { name: "Tre Skool", href: "https://treskoolskateboarding.nz/", icon: "/icons/treskool.png", noInvert: true },
-  { name: "Hamilton Skate Association", href: "https://www.instagram.com/hamilton_skate_association/", icon: "/icons/hsa.png", noInvert: true },
-  { name: "YouTube", href: "https://www.youtube.com/@sk8reactions", icon: "/icons/youtube.png", noInvert: true },
-  { name: "Instagram", href: "https://www.instagram.com/sk8reactions/", icon: "/icons/instagram.png", noInvert: true },
-  { name: "TikTok", href: "https://www.tiktok.com/@sk8reactions", icon: "/icons/tiktok.png", noInvert: true },
+  { name: "Tre Skool", href: "https://treskoolskateboarding.nz/", icon: "/icons/treskool.png", noInvert: true, blendScreen: false },
+  { name: "Hamilton Skate Association", href: "https://www.instagram.com/hamilton_skate_association/", icon: "/icons/hsa.png", noInvert: true, blendScreen: false },
+  { name: "YouTube", href: "https://www.youtube.com/@sk8reactions", icon: "/icons/youtube.png", noInvert: true, blendScreen: true },
+  { name: "Instagram", href: "https://www.instagram.com/sk8reactions/", icon: "/icons/instagram.png", noInvert: true, blendScreen: true },
+  { name: "TikTok", href: "https://www.tiktok.com/@sk8reactions", icon: "/icons/tiktok.png", noInvert: true, blendScreen: true },
 ] as const
 
 const TRICKS_MAP: { [key: string]: string } = {
@@ -432,7 +432,7 @@ export default function SlotMachine() {
 
       {/* Socials + settings */}
       <nav className="socials-bar gradient-flow flex items-center gap-3 mb-6" aria-label="Social links">
-        {SOCIAL_LINKS.map(({ name, href, icon, noInvert }) => (
+        {SOCIAL_LINKS.map(({ name, href, icon, noInvert, blendScreen }) => (
           <a
             key={name}
             href={href}
@@ -444,9 +444,13 @@ export default function SlotMachine() {
             <Image
               src={icon}
               alt={name}
-              width={26}
-              height={26}
-              className={`w-[26px] h-[26px] object-contain opacity-80 hover:opacity-100 transition-opacity ${noInvert ? "rounded-md" : "[filter:brightness(0)_invert(1)]"}`}
+              width={40}
+              height={40}
+              className={`w-[40px] h-[40px] object-contain opacity-80 hover:opacity-100 transition-opacity ${
+                blendScreen ? "mix-blend-screen rounded-xl" :
+                noInvert ? "rounded-md" :
+                "[filter:brightness(0)_invert(1)]"
+              }`}
             />
           </a>
         ))}
