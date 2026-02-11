@@ -2,13 +2,18 @@ import "@/app/globals.css"
 import type { Metadata, Viewport } from "next"
 import type React from "react"
 
+const canonicalUrl = "https://sk8reactions.cloud"
+
 export const metadata: Metadata = {
-  metadataBase: new URL("https://sk8reactions.cloud"),
+  metadataBase: new URL(canonicalUrl),
   title: "Spin 3 Random Moves",
   description: "Pick your moves, spin, stomp the line.",
+  alternates: {
+    canonical: canonicalUrl,
+  },
   openGraph: {
     type: "website",
-    url: "https://sk8reactions.cloud",
+    url: canonicalUrl,
     title: "3 Random Moves",
     description: "Pick your moves, spin, stomp the line.",
     siteName: "SK8REACTIONS",
