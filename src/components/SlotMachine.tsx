@@ -164,17 +164,19 @@ export default function SlotMachine() {
 
     setIsRecording(true)
 
-    const fps = 10
-    const frameInterval = 1000 / fps
-    const scale = 2
     const elW = el.offsetWidth
     const elH = el.offsetHeight
-    const width = Math.round(elW * scale)
-    const height = Math.round(elH * scale)
 
     // Decide recording path
     const useCaptureStream = canUseCaptureStream()
     const useEncoder = !useCaptureStream && canUseVideoEncoder()
+
+    // Use lower scale on encoder path (iOS) for speed; higher on desktop
+    const scale = useEncoder ? 1 : 2
+    const fps = useCaptureStream ? 15 : 8
+    const frameInterval = 1000 / fps
+    const width = Math.round(elW * scale)
+    const height = Math.round(elH * scale)
 
     // Shared canvas for drawing frames
     const canvas = document.createElement("canvas")
@@ -219,16 +221,17 @@ export default function SlotMachine() {
         codec: "avc1.42001f",
         width,
         height,
-        bitrate: 4_000_000,
+        bitrate: 3_000_000,
         framerate: fps,
       })
     } else {
-      // No recording support — still spin but skip recording
       clipExtRef.current = "mp4"
     }
 
     let capturing = true
-    let frameIndex = 0
+    const recordStartTime = performance.now()
+    let lastFrameTimestamp = 0
+
     const captureFrame = async () => {
       if (!capturing) return
       try {
@@ -237,16 +240,20 @@ export default function SlotMachine() {
         ctx.fillRect(0, 0, width, height)
         ctx.drawImage(snapshot, 0, 0, width, height)
 
-        // For encoder path, feed frame
+        // For encoder path, use real wall-clock elapsed time as timestamp
         if (useEncoder && encoder && encoder.state === "configured") {
+          const elapsed = performance.now() - recordStartTime
+          const timestampUs = Math.round(elapsed * 1000) // ms -> microseconds
+          // Ensure timestamps are strictly increasing
+          const safeTimestamp = Math.max(timestampUs, lastFrameTimestamp + 1000)
+          lastFrameTimestamp = safeTimestamp
           const frame = new VideoFrame(canvas, {
-            timestamp: frameIndex * (1_000_000 / fps), // microseconds
-            duration: 1_000_000 / fps,
+            timestamp: safeTimestamp,
+            duration: Math.round(frameInterval * 1000), // frame duration in us
           })
-          encoder.encode(frame)
+          encoder.encode(frame, { keyFrame: elapsed < 100 }) // first frame = keyframe
           frame.close()
         }
-        frameIndex++
       } catch {
         // skip frame
       }
