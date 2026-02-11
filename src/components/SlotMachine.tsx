@@ -352,15 +352,16 @@ export default function SlotMachine() {
         }
       } else if (useEncoder && encoder && muxer) {
         // ----- PATH B: Safari/iOS — frame capture + encode -----
-        // 400ms timeout works on fast devices (13 Pro+).
-        // Safety net with long timeout ensures slower devices still get a clip.
+        // Fast 300ms loop for capable devices (13 Pro+) → smooth video.
+        // If <3 frames captured, slow fallback with 1.5s timeouts kicks in
+        // to guarantee at least 3 key frames for slower devices (SE, 12 mini).
 
         const TOTAL_MS = 5000
-        const SNAP_TIMEOUT = 400
+        const SNAP_TIMEOUT = 300
         const frames: { imageData: ImageData; timeMs: number }[] = []
         const t0 = performance.now()
 
-        // Capture loop — grab as many frames as the device can handle
+        // Fast capture loop — grab as many frames as the device can handle
         while (performance.now() - t0 < TOTAL_MS) {
           const timeMs = performance.now() - t0
           try {
@@ -380,22 +381,23 @@ export default function SlotMachine() {
           await new Promise((r) => setTimeout(r, 4))
         }
 
-        // Safety net: if 0 frames from fast loop, try with generous timeouts
-        // This ensures slower devices (SE, 12 mini) still produce a clip
-        if (frames.length === 0) {
-          const fallbackTimes = [0, 1500, 3500]
-          for (const holdAt of fallbackTimes) {
+        // Slow fallback: if <3 frames, device is too slow for the fast loop.
+        // Capture key moments with generous 1.5s timeouts so slow devices
+        // still produce a usable slideshow-style clip.
+        if (frames.length < 3) {
+          const keyTimes = [0, 1200, 2400, 3600, 4800]
+          for (const holdAt of keyTimes) {
             try {
               const snap = await Promise.race([
                 snapElement(el, scale, elW, elH),
-                new Promise<never>((_, rej) => setTimeout(() => rej(new Error("fb_timeout")), 2000)),
+                new Promise<never>((_, rej) => setTimeout(() => rej(new Error("fb_timeout")), 1500)),
               ]) as HTMLCanvasElement
               ctx.drawImage(snap, 0, 0, width, height)
               frames.push({ imageData: ctx.getImageData(0, 0, width, height), timeMs: holdAt })
               snap.width = 0
               snap.height = 0
             } catch { /* skip */ }
-            await new Promise((r) => setTimeout(r, 100))
+            await new Promise((r) => setTimeout(r, 50))
           }
         }
 
