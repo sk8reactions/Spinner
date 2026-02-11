@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     siteName: "SK8REACTIONS",
     locale: "en_US",
     images: [
-      { url: "/og-image.png?v=8", width: 1200, height: 630, alt: "SK8REACTIONS — 3 Random Moves" },
+      { url: "/og-image.png?v=8", width: 1200, height: 630, alt: "3 Random Moves" },
     ],
   },
   twitter: {
