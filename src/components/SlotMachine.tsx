@@ -169,13 +169,14 @@ export default function SlotMachine() {
     const elW = el.offsetWidth
     const elH = el.offsetHeight
 
-    // Decide recording path
-    const useCaptureStream = canUseCaptureStream()
+    // Decide recording path — force iOS to encoder path for reliability
+    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && 'ontouchend' in document)
+    const useCaptureStream = !isIOS && canUseCaptureStream()
     const useEncoder = !useCaptureStream && canUseVideoEncoder()
 
     // Use lower scale on encoder path (iOS) for speed; higher on desktop
-    const scale = useEncoder ? 1 : 2
-    const fps = useCaptureStream ? 15 : 16
+    const scale = useCaptureStream ? 2 : 1
+    const fps = useCaptureStream ? 15 : 2
     const frameInterval = 1000 / fps
     const width = Math.round(elW * scale)
     const height = Math.round(elH * scale)
@@ -276,74 +277,31 @@ export default function SlotMachine() {
         setClipReady(true)
       }
     } else if (useEncoder && encoder && muxer) {
-      // ----- PATH B: Safari/iOS — two-phase: capture bitmaps, then encode -----
-      // Phase 1: Capture frames as ImageBitmaps at scheduled times.
-      //          Use tiny scale to keep html2canvas fast and avoid memory death.
-      // Phase 2: After spin completes, encode all stored bitmaps into video.
+      // ----- PATH B: Safari/iOS — 4 key-frame captures then encode -----
+      // Only capture 4 snapshots at key moments to avoid overwhelming iOS memory.
+      // Each frame is stored as lightweight ImageData, then batch-encoded after animation.
 
-      const iosScale = Math.min(0.6, 360 / elW) // cap at 360px wide
-      const iosW = Math.round(elW * iosScale)
-      const iosH = Math.round(elH * iosScale)
-      // Resize the shared canvas to the small iOS size
-      canvas.width = iosW
-      canvas.height = iosH
+      const capturePoints = [
+        { delayMs: 500, holdMs: 2000 },    // All spinning
+        { delayMs: 2500, holdMs: 2000 },   // After first trick (revealed at 2000ms)
+        { delayMs: 4500, holdMs: 2000 },   // After second trick (revealed at 4000ms)
+        { delayMs: 6500, holdMs: 1000 },   // After third trick (revealed at 6000ms)
+      ]
 
-      // Re-configure encoder for the smaller size
-      encoder.configure({
-        codec: "avc1.42001f",
-        width: iosW,
-        height: iosH,
-        bitrate: 2_000_000,
-        framerate: 2,
-      })
-      // Also update the muxer dimensions — need to recreate
-      encoder.close()
-      muxer.finalize() // finalize old empty muxer
-      const { Muxer: MuxerClass2, ArrayBufferTarget: ABT2 } = await import("mp4-muxer")
-      const target2 = new ABT2()
-      muxer = new MuxerClass2({
-        target: target2,
-        video: { codec: "avc", width: iosW, height: iosH },
-        fastStart: "in-memory",
-      })
-      encoder = new VideoEncoder({
-        output: (chunk, meta) => { muxer!.addVideoChunk(chunk, meta ?? undefined) },
-        error: (e) => console.error("VideoEncoder error:", e),
-      })
-      encoder.configure({
-        codec: "avc1.42001f",
-        width: iosW,
-        height: iosH,
-        bitrate: 2_000_000,
-        framerate: 2,
-      })
-
-      // Capture times aligned with trick reveals (2s, 4s, 6s)
-      const captureTimes = [0, 1500, 2200, 3500, 4200, 5500, 6200, 7000]
-      const storedFrames: { bitmap: ImageBitmap; timeMs: number }[] = []
+      const storedFrames: { imageData: ImageData; holdMs: number }[] = []
       const recordStart = performance.now()
 
-      for (const targetMs of captureTimes) {
+      for (const { delayMs, holdMs } of capturePoints) {
         const elapsed = performance.now() - recordStart
-        if (targetMs > elapsed) {
-          await new Promise((r) => setTimeout(r, targetMs - elapsed))
+        if (delayMs > elapsed) {
+          await new Promise((r) => setTimeout(r, delayMs - elapsed))
         }
         try {
-          const snapshot = await html2canvas(el, {
-            backgroundColor: "#0a0a0a",
-            scale: iosScale,
-            logging: false,
-            useCORS: true,
-            width: elW,
-            height: elH,
-            windowWidth: document.documentElement.clientWidth,
-            windowHeight: document.documentElement.clientHeight,
-            scrollX: 0,
-            scrollY: 0,
-          })
-          const bitmap = await createImageBitmap(snapshot)
-          storedFrames.push({ bitmap, timeMs: targetMs })
-          // Immediately free the html2canvas result
+          const snapshot = await snapElement(el, scale, elW, elH)
+          ctx.drawImage(snapshot, 0, 0, width, height)
+          const imgData = ctx.getImageData(0, 0, width, height)
+          storedFrames.push({ imageData: imgData, holdMs })
+          // Free the html2canvas canvas immediately
           snapshot.width = 0
           snapshot.height = 0
         } catch {
@@ -351,29 +309,31 @@ export default function SlotMachine() {
         }
       }
 
-      // Phase 2: encode all stored bitmaps
-      const iosCtx = canvas.getContext("2d")!
-      for (let i = 0; i < storedFrames.length; i++) {
-        const { bitmap, timeMs } = storedFrames[i]
-        const nextMs = i < storedFrames.length - 1 ? storedFrames[i + 1].timeMs : timeMs + 1000
-        try {
-          iosCtx.fillStyle = "#0a0a0a"
-          iosCtx.fillRect(0, 0, iosW, iosH)
-          iosCtx.drawImage(bitmap, 0, 0, iosW, iosH)
-          bitmap.close()
+      // Wait for spin animation to finish
+      const totalElapsed = performance.now() - recordStart
+      if (totalElapsed < 7000) {
+        await new Promise((r) => setTimeout(r, 7000 - totalElapsed))
+      }
 
+      // Phase 2: Encode stored frames into video
+      let timestamp = 0
+      for (let i = 0; i < storedFrames.length; i++) {
+        const { imageData, holdMs } = storedFrames[i]
+        try {
+          ctx.putImageData(imageData, 0, 0)
           const vf = new VideoFrame(canvas, {
-            timestamp: timeMs * 1000,
-            duration: (nextMs - timeMs) * 1000,
+            timestamp: timestamp * 1000, // microseconds
+            duration: holdMs * 1000,     // microseconds
           })
-          encoder.encode(vf, { keyFrame: i === 0 })
+          encoder.encode(vf, { keyFrame: true })
           vf.close()
+          timestamp += holdMs
         } catch {
           // skip
         }
       }
 
-      // Drain encoder queue
+      // Drain encoder queue and finalize
       await encoder.flush()
       encoder.close()
       muxer.finalize()
