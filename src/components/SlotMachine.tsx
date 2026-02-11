@@ -112,8 +112,8 @@ export default function SlotMachine() {
   const [trickToggles, setTrickToggles] = useState<TrickTogglesState>({
     stances: { fakie: false, nollie: false, switch: false },
     tricks: {
-      ollie: true, fs180: false, bs180: false, fsShuv: false, bsShuv: false,
-      kickflip: false, heelflip: false, varialKickflip: false, varialHeelflip: false,
+      ollie: true, fs180: true, bs180: true, fsShuv: true, bsShuv: true,
+      kickflip: true, heelflip: true, varialKickflip: false, varialHeelflip: false,
       hardflip: false, inwardHeelflip: false, fs180Kickflip: false, bs180Kickflip: false,
       fs180Heelflip: false, bs180Heelflip: false, treFlip: false, impossible: false,
       fsBigspin: false, bsBigspin: false,
@@ -286,11 +286,12 @@ export default function SlotMachine() {
         // with additional frames between them.
 
         const TOTAL_MS = 8880
-        const SNAP_TIMEOUT = 1500 // max ms per html2canvas call before skipping
+        const SNAP_TIMEOUT = 1000 // max ms per html2canvas call before skipping
         const frames: { imageData: ImageData; timeMs: number }[] = []
         const t0 = performance.now()
 
         // Adaptive capture loop — grab as many frames as iOS can handle
+        // Tighter timing for more frames per second
         while (performance.now() - t0 < TOTAL_MS) {
           const timeMs = performance.now() - t0
           try {
@@ -309,7 +310,7 @@ export default function SlotMachine() {
             // timed out or failed — skip this frame
           }
           // Brief pause to let UI & animations breathe
-          await new Promise((r) => setTimeout(r, 50))
+          await new Promise((r) => setTimeout(r, 20))
         }
 
         // Phase 2: Encode captured frames into video
