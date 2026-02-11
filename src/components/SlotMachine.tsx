@@ -274,63 +274,57 @@ export default function SlotMachine() {
         setClipReady(true)
       }
     } else if (useEncoder && encoder && muxer) {
-      // ----- PATH B: Safari/iOS — sequential capture, then encode -----
-      // Capture frames sequentially; html2canvas is slow on iOS (~300-800ms per call)
-      // so we capture as many as we can in 7 seconds with real timestamps
-      const totalDurationMs = 7000
+      // ----- PATH B: Safari/iOS — fixed-interval keyframe capture -----
+      // html2canvas is very slow & memory-heavy on iOS (~500ms-1s per call).
+      // Capture at scheduled timestamps only (1 per second) to avoid memory exhaustion.
+      const captureTimesMs = [0, 1000, 2000, 2500, 3000, 4000, 4500, 5000, 6000, 6500, 7000]
       const recordStart = performance.now()
-      let frameIdx = 0
 
-      while (performance.now() - recordStart < totalDurationMs) {
-        const frameStart = performance.now()
+      for (let i = 0; i < captureTimesMs.length; i++) {
+        const targetMs = captureTimesMs[i]
+        // Wait until the target time
+        const now = performance.now() - recordStart
+        if (targetMs > now) {
+          await new Promise((r) => setTimeout(r, targetMs - now))
+        }
+
         try {
           const snapshot = await snapElement(el, scale, elW, elH)
           ctx.fillStyle = "#0a0a0a"
           ctx.fillRect(0, 0, width, height)
           ctx.drawImage(snapshot, 0, 0, width, height)
+          // Clean up the snapshot canvas to free iOS memory
+          snapshot.width = 0
+          snapshot.height = 0
 
-          const elapsedMs = performance.now() - recordStart
-          const timestampUs = Math.round(elapsedMs * 1000)
-
-          // Calculate duration: time until next frame, or remaining time if last frame
-          const remainingMs = totalDurationMs - elapsedMs
-          const frameDurUs = Math.round(Math.min(500, remainingMs) * 1000)
+          const timestampUs = targetMs * 1000
+          // Duration extends to the next capture time (or 500ms for the last frame)
+          const nextMs = i < captureTimesMs.length - 1 ? captureTimesMs[i + 1] : targetMs + 500
+          const durationUs = (nextMs - targetMs) * 1000
 
           if (encoder.state === "configured") {
             const vf = new VideoFrame(canvas, {
               timestamp: timestampUs,
-              duration: Math.max(frameDurUs, 33000), // min ~33ms
+              duration: durationUs,
             })
-            encoder.encode(vf, { keyFrame: frameIdx === 0 })
+            encoder.encode(vf, { keyFrame: i % 3 === 0 })
             vf.close()
-            frameIdx++
           }
         } catch {
           // skip frame
         }
-        // Small yield to let UI update (trick reveals happen via setTimeout)
-        const elapsed = performance.now() - frameStart
-        if (elapsed < 100) {
-          await new Promise((r) => setTimeout(r, 50))
-        }
       }
 
-      // Add one final frame covering any remaining time
-      try {
-        const snapshot = await snapElement(el, scale, elW, elH)
-        ctx.fillStyle = "#0a0a0a"
-        ctx.fillRect(0, 0, width, height)
-        ctx.drawImage(snapshot, 0, 0, width, height)
-        const finalTs = Math.round(totalDurationMs * 1000)
-        if (encoder.state === "configured") {
-          const vf = new VideoFrame(canvas, {
-            timestamp: finalTs,
-            duration: 500_000, // 500ms hold
-          })
-          encoder.encode(vf, { keyFrame: false })
-          vf.close()
-        }
-      } catch { /* skip */ }
+      // Wait for encoder queue to drain before flushing
+      if (encoder.encodeQueueSize > 0) {
+        await new Promise<void>((r) => {
+          const check = () => {
+            if (encoder!.encodeQueueSize === 0) r()
+            else setTimeout(check, 50)
+          }
+          check()
+        })
+      }
 
       await encoder.flush()
       encoder.close()
