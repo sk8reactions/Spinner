@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next"
 import type React from "react"
 
 export const metadata: Metadata = {
+  metadataBase: new URL("sk8reactions.cloud"),
   title: "Spin 3 Random Moves",
   description: "Pick your moves, spin, stomp the line.",
   openGraph: {
