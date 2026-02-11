@@ -5,6 +5,17 @@ import type React from "react"
 export const metadata: Metadata = {
   title: "@sk8reactions — 3 Tricks 1 Run",
   description: "Skate trick wheel by @sk8reactions. Pick your moves, spin the wheel, stomp the line.",
+  openGraph: {
+    title: "@sk8reactions — 3 Tricks 1 Run",
+    description: "Skate trick wheel by @sk8reactions. Pick your moves, spin the wheel, stomp the line.",
+    images: [{ url: "/og-image.png", width: 1200, height: 630 }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "@sk8reactions — 3 Tricks 1 Run",
+    description: "Skate trick wheel by @sk8reactions. Pick your moves, spin the wheel, stomp the line.",
+    images: ["/og-image.png"],
+  },
 }
 
 export const viewport: Viewport = {
