@@ -183,26 +183,30 @@ body {
 @keyframes pulse-glow {
   0%, 100% {
     box-shadow:
-      0 0 20px rgba(239, 68, 68, 0.4),
-      0 0 40px rgba(239, 68, 68, 0.1),
-      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      0 0 15px rgba(239, 68, 68, 0.5),
+      0 0 30px rgba(239, 68, 68, 0.3),
+      0 0 60px rgba(239, 68, 68, 0.15),
+      0 0 90px rgba(239, 68, 68, 0.05),
+      inset 0 1px 0 rgba(255, 255, 255, 0.15);
   }
   50% {
     box-shadow:
-      0 0 30px rgba(239, 68, 68, 0.6),
-      0 0 60px rgba(239, 68, 68, 0.2),
-      inset 0 1px 0 rgba(255, 255, 255, 0.15);
+      0 0 20px rgba(239, 68, 68, 0.7),
+      0 0 45px rgba(239, 68, 68, 0.5),
+      0 0 80px rgba(239, 68, 68, 0.3),
+      0 0 120px rgba(239, 68, 68, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
   }
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #dc2626 0%, #ef4444 50%, #dc2626 100%);
+  background: linear-gradient(135deg, #b91c1c 0%, #dc2626 30%, #ef4444 50%, #dc2626 70%, #b91c1c 100%);
   color: #fff;
   font-weight: 700;
   letter-spacing: 0.05em;
-  border: 1px solid rgba(255, 100, 100, 0.3);
+  border: 1px solid rgba(255, 120, 120, 0.4);
   border-radius: 12px;
-  animation: pulse-glow 2s ease-in-out infinite;
+  animation: pulse-glow 1.5s ease-in-out infinite;
   transition: transform 0.15s ease, filter 0.15s ease;
 }
 

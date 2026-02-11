@@ -173,7 +173,7 @@ export default function SlotMachine() {
 
     // Use lower scale on encoder path (iOS) for speed; higher on desktop
     const scale = useEncoder ? 1 : 2
-    const fps = useCaptureStream ? 15 : 8
+    const fps = useCaptureStream ? 15 : 16
     const frameInterval = 1000 / fps
     const width = Math.round(elW * scale)
     const height = Math.round(elH * scale)
