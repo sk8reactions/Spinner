@@ -1,4 +1,6 @@
+# Allow all crawlers (empty Disallow = allow all)
 User-agent: *
-Allow: /
+Disallow:
 
+# Sitemap for discovery
 Sitemap: https://www.sk8reactions.cloud/sitemap.xml
